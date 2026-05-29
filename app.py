@@ -1016,7 +1016,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         unsafe_allow_html=True,
     )
 
-    st.caption("📊 CHIRPS 1991–2020 · NOAA ONI · Open-Meteo")
+    st.caption("📊 Indonesian Agency for Meteorology, Climatology and Geophysics · NOAA ONI")
 
     # ── WHAT TO DO IN THE NEXT 3 MONTHS ──────────────────────────
     next_3 = [wrap_month(current_month + i) for i in range(3)]

@@ -1010,16 +1010,19 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         water_lbl = t("water_ok") if n_deficit == 0 else (t("water_warn") if n_deficit <= 2 else t("water_bad"))
         prob_lbl  = t("prob_high") if s >= 75 else (t("prob_mid") if s >= 50 else t("prob_low"))
 
-        if crop["duration"] == 12:
-            harvest_str = t("perennial")
+        if s >= 75:
+            if crop["duration"] == 12:
+                harvest_line = f"\n🗓️ {t('harvest')}: **{t('perennial')}**"
+            else:
+                harvest_m    = wrap_month(current_month + crop["duration"])
+                harvest_line = f"\n🗓️ {t('harvest')}: **{mname(harvest_m)}**"
         else:
-            harvest_m   = wrap_month(current_month + crop["duration"])
-            harvest_str = mname(harvest_m)
+            harvest_line = ""
 
         msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
                f"{prob_lbl}  \n"
-               f"{water_lbl}  \n"
-               f"🗓️ {t('harvest')}: **{harvest_str}**")
+               f"{water_lbl}"
+               f"{harvest_line}")
         with col:
             if s >= 75:
                 st.success(f"**{t('farmer_go')}**\n\n" + msg)

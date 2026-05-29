@@ -185,7 +185,7 @@ T = {
         "override": "Override condition:",
         "sim_warning": "⚠️ Showing simulated scenario — not current real condition.",
         "lang_label": "🌐 Language",
-        "hero_region": "🌏 Kalimantan Tengah · Indonesia",
+        "hero_region": "🌏 Central Kalimantan · Indonesia",
         "hero_title": "Agricultural Planting Calendar", "hero_sub": "Advisor",
         "chip1": "📊 CHIRPS 1991–2020", "chip2": "🌊 ENSO / ONI Integration",
         "chip3": "🗺️ Spatial Analysis", "chip4": "🌾 Rice · Oil Palm · Cassava",
@@ -996,9 +996,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         clim = clim.copy()
         for m, rain in forecast_rain.items():
             clim.loc[m, "mean"] = rain
-        st.info(t("forecast_on"))
-    else:
-        st.caption(t("forecast_off"))
 
     # ── Climate banner ────────────────────────────────────────────
     banner_cfg = {
@@ -1018,6 +1015,8 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         f"</div></div>",
         unsafe_allow_html=True,
     )
+
+    st.caption("📊 CHIRPS 1991–2020 · NOAA ONI · Open-Meteo")
 
     # ── WHAT TO DO IN THE NEXT 3 MONTHS ──────────────────────────
     next_3 = [wrap_month(current_month + i) for i in range(3)]

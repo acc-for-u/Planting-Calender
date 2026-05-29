@@ -1073,7 +1073,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
     crop_headers = [f"{CROPS[c]['icon']} {t(c)}" for c in crop_names]
 
     rows_html = ""
-    for m in range(1, 13):
+    for m in next_3:
         is_now    = (m == current_month)
         month_lbl = mname(m) + (f" <b style='color:#e74c3c'>{t('this_month')}</b>" if is_now else "")
         row_bg    = "background:#fffbe6;" if is_now else ""

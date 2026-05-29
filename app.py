@@ -1359,19 +1359,10 @@ def main():
         f"<div class='hero-card'>"
         f"<div style='font-size:0.8rem;color:rgba(255,255,255,0.6);letter-spacing:2px;"
         f"text-transform:uppercase;margin-bottom:10px'>{t('hero_region')}</div>"
-        f"<div style='font-size:2rem;font-weight:700;color:white;line-height:1.25;margin-bottom:14px'>"
+        f"<div style='font-size:2rem;font-weight:700;color:white;line-height:1.25'>"
         f"{t('hero_title')}<br>"
         f"<span style='color:#90ee90;font-size:2.2rem'>{t('hero_sub')}</span></div>"
-        f"<div style='display:flex;gap:12px;flex-wrap:wrap'>"
-        f"<span style='background:rgba(255,255,255,0.15);color:white;padding:6px 14px;"
-        f"border-radius:20px;font-size:0.8rem'>{t('chip1')}</span>"
-        f"<span style='background:rgba(255,255,255,0.15);color:white;padding:6px 14px;"
-        f"border-radius:20px;font-size:0.8rem'>{t('chip2')}</span>"
-        f"<span style='background:rgba(255,255,255,0.15);color:white;padding:6px 14px;"
-        f"border-radius:20px;font-size:0.8rem'>{t('chip3')}</span>"
-        f"<span style='background:rgba(255,255,255,0.15);color:white;padding:6px 14px;"
-        f"border-radius:20px;font-size:0.8rem'>{t('chip4')}</span>"
-        f"</div></div>",
+        f"</div>",
         unsafe_allow_html=True,
     )
 

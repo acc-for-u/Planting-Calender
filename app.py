@@ -1121,32 +1121,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         st.plotly_chart(make_rainfall_envelope_chart(clim, enso_phase), use_container_width=True)
         st.caption(t("uncertainty_note"))
 
-    # ── GENERAL RECOMMENDATIONS ───────────────────────────────────
-    st.markdown(
-        f"<div class='section-header'>{t('sec_rec')}</div>",
-        unsafe_allow_html=True,
-    )
-    rec_header = t(f"rec_header_{enso_phase}")
-    if enso_phase == "El Niño":
-        st.error(rec_header)
-    elif enso_phase == "La Niña":
-        st.info(rec_header)
-    else:
-        st.success(rec_header)
-
-    # Dynamic bullets — consistent with actual card scores
-    bullets = []
-    for crop_name in CROPS:
-        s    = upcoming[crop_name]["score"]
-        icon = CROPS[crop_name]["icon"]
-        name = t(crop_name)
-        if s >= 75:
-            bullets.append(f"- {icon} **{name}**: {t('farmer_go')}")
-        elif s >= 50:
-            bullets.append(f"- {icon} **{name}**: {t('farmer_cau')}")
-        else:
-            bullets.append(f"- {icon} **{name}**: {t('farmer_stop')}")
-    st.markdown("\n".join(bullets))
 
     # ── BEST CROP MAP (next 3 months) ────────────────────────────
     if grid_clim is not None:

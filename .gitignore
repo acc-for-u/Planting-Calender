@@ -1,0 +1,34 @@
+# Shapefile asli Indonesia (sudah diganti versi Kalteng-only di shp/)
+SHP_Indo/
+SHP_Gambut/
+SHP_LandCover/
+
+# Geodatabase land cover (sudah diproses ke shp/)
+PL2020R_2021.gdb/
+PL2020R_2021.gdb.zip
+
+# File duplikat di root (sudah ada di data/)
+/CH_BlendPos_CHIRP_clip.xlsx
+
+# File tidak diperlukan untuk deployment
+make_*.py
+clip_shp.py
+take_screenshots.py
+get_maps_screenshot.py
+hindcast_validation.py
+run.bat
+screenshots/
+*.pptx
+*.docx
+*.pdf
+*.csv
+hindcast_results.csv
+hindcast_divergence.csv
+
+# Screenshot
+Screenshot*.png
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

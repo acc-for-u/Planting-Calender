@@ -253,6 +253,10 @@ T = {
                      "- Data: KLHK 2021 · Scale 1:250,000"),
         "lc_nodata": "Land cover data not available.",
         "source_noaa": "Source: NOAA",
+        "sec_calendar": "📅 Monthly Planting Calendar",
+        "cal_note": "Based on 30-year climatology adjusted for current ENSO condition.",
+        "col_month": "Month",
+        "this_month": "← Now",
         "prob_label": "Success probability",
         "uncertainty_note": ("⚠️ **Climate Uncertainty:** Historical data has natural variability. "
                              "Shaded area shows the range of possible rainfall based on 30-year records. "
@@ -363,6 +367,10 @@ T = {
                      "- Data: KLHK 2021 · Skala 1:250.000"),
         "lc_nodata": "Data tutupan lahan tidak tersedia.",
         "source_noaa": "Sumber: NOAA",
+        "sec_calendar": "📅 Kalender Tanam Bulanan",
+        "cal_note": "Berdasarkan klimatologi 30 tahun yang disesuaikan dengan kondisi ENSO saat ini.",
+        "col_month": "Bulan",
+        "this_month": "← Sekarang",
         "prob_label": "Peluang keberhasilan",
         "uncertainty_note": ("⚠️ **Ketidakpastian Iklim:** Data historis memiliki variabilitas alami. "
                              "Area bayangan menunjukkan rentang kemungkinan curah hujan berdasarkan data 30 tahun. "
@@ -1053,6 +1061,54 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             crop=t(best_crop),
             month=upcoming[best_crop]["best_month_name"],
         ))
+
+    # ── MONTHLY CALENDAR TABLE ────────────────────────────────────
+    st.markdown(
+        f"<div class='section-header'>{t('sec_calendar')}</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption(t("cal_note"))
+
+    crop_names   = list(CROPS.keys())
+    crop_headers = [f"{CROPS[c]['icon']} {t(c)}" for c in crop_names]
+
+    rows_html = ""
+    for m in range(1, 13):
+        is_now    = (m == current_month)
+        month_lbl = mname(m) + (f" <b style='color:#e74c3c'>{t('this_month')}</b>" if is_now else "")
+        row_bg    = "background:#fffbe6;" if is_now else ""
+        cells = ""
+        for crop_name in crop_names:
+            s  = planting_score(clim, crop_name, m, oni_val)["score"]
+            if s >= 75:
+                cell_bg, emoji, label = "#d5f5e3", "✅", t("farmer_go")
+            elif s >= 50:
+                cell_bg, emoji, label = "#fef9e7", "⚠️", t("farmer_cau")
+            else:
+                cell_bg, emoji, label = "#fadbd8", "❌", t("farmer_stop")
+            cells += (
+                f"<td style='background:{cell_bg};text-align:center;padding:8px 6px;"
+                f"font-size:0.82rem;font-weight:600;border-radius:6px'>"
+                f"{emoji} {label}</td>"
+            )
+        rows_html += (
+            f"<tr style='{row_bg}'>"
+            f"<td style='padding:8px 12px;font-weight:{'700' if is_now else '400'};"
+            f"font-size:0.85rem;white-space:nowrap'>{month_lbl}</td>"
+            f"{cells}</tr>"
+        )
+
+    header_cells = "".join(
+        f"<th style='text-align:center;padding:8px;font-size:0.85rem;color:#555'>{h}</th>"
+        for h in crop_headers
+    )
+    table_html = (
+        f"<table style='width:100%;border-collapse:separate;border-spacing:4px'>"
+        f"<thead><tr><th style='padding:8px 12px;text-align:left;color:#555;font-size:0.85rem'>"
+        f"{t('col_month')}</th>{header_cells}</tr></thead>"
+        f"<tbody>{rows_html}</tbody></table>"
+    )
+    st.markdown(table_html, unsafe_allow_html=True)
 
     # ── TECHNICAL EXPANDER (untuk Penyuluh Pertanian) ────────────
     with st.expander(t("tech_exp")):

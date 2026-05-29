@@ -122,6 +122,45 @@ LC_STYLE = {
     "Lainnya":             {"color": "#bdc3c7", "icon": "—"},
 }
 
+CROP_NOTES = {
+    "Rice": {
+        "en": {
+            "El Niño": "⚠️ High drought risk. Delay to Oct–Nov when rains return.",
+            "La Niña": "✅ Strong wet season ahead — excellent for rice.",
+            "Neutral": "✅ Good conditions. Oct–Nov are the optimal months.",
+        },
+        "id": {
+            "El Niño": "⚠️ Risiko kekeringan tinggi. Tunda ke Okt–Nov saat hujan kembali.",
+            "La Niña": "✅ Musim hujan lebih kuat — sangat baik untuk padi.",
+            "Neutral": "✅ Kondisi baik. Okt–Nov adalah waktu paling optimal.",
+        },
+    },
+    "Oil Palm": {
+        "en": {
+            "El Niño": "⚠️ Prepare water reserves. Yield may drop ~20% during dry spell.",
+            "La Niña": "✅ Good conditions. Maintain drainage to prevent root rot.",
+            "Neutral": "✅ Stable year-round crop. Suitable for planting any month.",
+        },
+        "id": {
+            "El Niño": "⚠️ Siapkan cadangan air. Produksi bisa turun ~20% saat kemarau.",
+            "La Niña": "✅ Kondisi bagus. Jaga drainase agar akar tidak busuk.",
+            "Neutral": "✅ Stabil sepanjang tahun. Cocok ditanam bulan apa pun.",
+        },
+    },
+    "Cassava": {
+        "en": {
+            "El Niño": "✅ Best choice during El Niño — highly drought tolerant.",
+            "La Niña": "✅ Good conditions. Ensure drainage to avoid root rot.",
+            "Neutral": "✅ Reliable choice. Oct–Dec are the optimal start months.",
+        },
+        "id": {
+            "El Niño": "✅ Pilihan terbaik saat El Niño — sangat tahan kekeringan.",
+            "La Niña": "✅ Kondisi baik. Pastikan drainase cukup agar umbi tidak busuk.",
+            "Neutral": "✅ Pilihan aman. Okt–Des adalah waktu tanam paling optimal.",
+        },
+    },
+}
+
 ENSO_OPTIONS = {
     "🟢  Normal":                                      ("Neutral",  0.0),
     "🟡  Mild El Niño  (slightly drier than usual)":  ("El Niño",  1.2),
@@ -965,15 +1004,22 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             harvest_m   = wrap_month(info["best_month"] + crop["duration"])
             harvest_str = f"~{mname(harvest_m)}"
 
-        adj_rain  = clim.loc[info["best_month"], "mean"] * ENSO_FACTORS[info["best_month"]][enso_phase]
-        water_lbl = t("water_ok") if adj_rain >= 150 else (t("water_warn") if adj_rain >= 100 else t("water_bad"))
+        # Water label based on actual water balance for this crop
+        wb        = water_balance(clim, crop_name, info["best_month"], oni_val)
+        n_deficit = int((wb["balance"] < 0).sum())
+        water_lbl = t("water_ok") if n_deficit == 0 else (t("water_warn") if n_deficit <= 2 else t("water_bad"))
         prob_lbl  = t("prob_high") if s >= 75 else (t("prob_mid") if s >= 50 else t("prob_low"))
+
+        # Crop-specific ENSO note
+        lang = st.session_state.get("lang", "en")
+        crop_note = CROP_NOTES[crop_name][lang][enso_phase]
 
         msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
                f"**{t('farmer_best_month')}:** {info['best_month_name']}  \n"
                f"**{t('farmer_harvest_est')}:** {harvest_str}  \n"
                f"{prob_lbl}  \n"
-               f"{water_lbl}")
+               f"{water_lbl}  \n\n"
+               f"*{crop_note}*")
         with col:
             if s >= 75:
                 st.success(f"**{t('farmer_go')}**\n\n" + msg)

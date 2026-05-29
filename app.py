@@ -233,6 +233,22 @@ T = {
                          "**Prepare supplemental irrigation** or consider delaying planting."),
         "warn_peat": ("🟤 **PEATLAND AREA NOTICE** — Agricultural activities on peatland carry additional risk of "
                       "subsidence and fire during dry spells. Consult BRG guidelines before proceeding."),
+        "farmer_go":   "✅ PLANT NOW",
+        "farmer_cau":  "⚠️ BE CAREFUL",
+        "farmer_stop": "❌ DELAY PLANTING",
+        "prob_high": "Chance of success: **High**",
+        "prob_mid":  "Chance of success: **Moderate**",
+        "prob_low":  "Chance of success: **Low**",
+        "water_ok":   "💧 Water: Sufficient",
+        "water_warn": "💧 Water: Monitor closely",
+        "water_bad":  "💧 Water: Insufficient",
+        "farmer_best_month": "Best planting month",
+        "farmer_harvest_est": "Estimated harvest",
+        "tech_exp": "📊 Technical Details — For Agricultural Extension Workers",
+        "tech_exp_desc": ("The charts and analyses below are intended for agricultural extension workers "
+                          "and users with a technical background."),
+        "chart_exp": "📈 Rainfall Chart & Climate Uncertainty",
+        "map_exp_label": "🗺️ Suitability Maps by Area",
     },
     "id": {
         "brand": "Kalender Tanam", "region": "KALIMANTAN TENGAH",
@@ -327,6 +343,22 @@ T = {
                          "**Siapkan irigasi tambahan** atau pertimbangkan menunda waktu tanam."),
         "warn_peat": ("🟤 **PERHATIAN LAHAN GAMBUT** — Aktivitas pertanian di lahan gambut berisiko penurunan muka tanah "
                       "dan kebakaran saat musim kering. Konsultasikan dengan pedoman BRG sebelum memulai."),
+        "farmer_go":   "✅ TANAM SEKARANG",
+        "farmer_cau":  "⚠️ HATI-HATI",
+        "farmer_stop": "❌ TUNDA DULU",
+        "prob_high": "Kemungkinan berhasil: **Tinggi**",
+        "prob_mid":  "Kemungkinan berhasil: **Sedang**",
+        "prob_low":  "Kemungkinan berhasil: **Rendah**",
+        "water_ok":   "💧 Air hujan: Cukup",
+        "water_warn": "💧 Air hujan: Perlu dipantau",
+        "water_bad":  "💧 Air hujan: Kurang",
+        "farmer_best_month": "Waktu tanam terbaik",
+        "farmer_harvest_est": "Perkiraan panen",
+        "tech_exp": "📊 Detail Teknis — untuk Penyuluh Pertanian",
+        "tech_exp_desc": ("Grafik dan analisis di bawah ini ditujukan untuk penyuluh pertanian "
+                          "dan pengguna dengan latar belakang teknis."),
+        "chart_exp": "📈 Grafik Curah Hujan & Ketidakpastian Iklim",
+        "map_exp_label": "🗺️ Peta Kesesuaian per Wilayah",
     },
 }
 
@@ -920,45 +952,12 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             "all":             month_scores,
         }
 
+    # ── SIMPLE FARMER BOXES (tampilan utama) ─────────────────────
     cols_now = st.columns(3)
     for col, crop_name in zip(cols_now, CROPS.keys()):
         info = upcoming[crop_name]
         crop = CROPS[crop_name]
         s    = info["score"]
-        bg_c = "#d5f5e3" if s >= 70 else ("#fef9e7" if s >= 50 else "#fadbd8")
-        fg_c = "#1a6b3c" if s >= 70 else ("#7d6608" if s >= 50 else "#922b21")
-        status_icon = "✅" if s >= 70 else ("⚠️" if s >= 50 else "❌")
-        status_lbl  = t("s_rec") if s >= 70 else (t("s_cau") if s >= 50 else t("s_not"))
-        crop_display = t(crop_name)
-
-        ring_color = crop["color"]
-        ring_html = (
-            f"<svg viewBox='0 0 36 36' width='90' height='90' style='display:block;margin:0 auto 8px'>"
-            f"<circle cx='18' cy='18' r='15.9155' fill='none' stroke='#f0f0f0' stroke-width='3'/>"
-            f"<circle cx='18' cy='18' r='15.9155' fill='none' stroke='{ring_color}' stroke-width='3'"
-            f" stroke-dasharray='{s:.0f} {100-s:.0f}' stroke-dashoffset='25'"
-            f" stroke-linecap='round' transform='rotate(-90 18 18)'/>"
-            f"<text x='18' y='17' text-anchor='middle' dominant-baseline='middle'"
-            f" font-size='7.5' font-weight='700' fill='{ring_color}'>{s:.0f}</text>"
-            f"<text x='18' y='24' text-anchor='middle' dominant-baseline='middle'"
-            f" font-size='3.5' fill='#aaa'>/ 100</text>"
-            f"</svg>"
-        )
-
-        mini_bars = "<div style='margin-top:10px;border-top:1px solid #f0f0f0;padding-top:10px'>"
-        for m in next_3:
-            ms = info["all"][m]["score"]
-            bc = "#27ae60" if ms >= 70 else ("#f39c12" if ms >= 50 else "#e74c3c")
-            mini_bars += (
-                f"<div style='display:flex;align-items:center;gap:8px;margin:5px 0'>"
-                f"<span style='width:28px;font-size:0.72rem;color:#666;font-weight:600'>{mname(m)}</span>"
-                f"<div style='flex:1;background:#f0f0f0;border-radius:4px;height:9px;overflow:hidden'>"
-                f"<div style='background:{bc};width:{ms}%;height:9px;border-radius:4px'></div></div>"
-                f"<span style='width:26px;font-size:0.72rem;text-align:right;color:{bc};"
-                f"font-weight:700'>{ms:.0f}</span>"
-                f"</div>"
-            )
-        mini_bars += "</div>"
 
         if crop["duration"] == 12:
             harvest_str = t("perennial")
@@ -966,33 +965,34 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             harvest_m   = wrap_month(info["best_month"] + crop["duration"])
             harvest_str = f"~{mname(harvest_m)}"
 
-        with col:
-            st.markdown(
-                f"<div style='background:white;border-radius:16px;padding:20px 16px;"
-                f"box-shadow:0 4px 20px rgba(0,0,0,0.07);border-top:4px solid {crop['color']}'>"
-                + ring_html +
-                f"<div style='text-align:center;font-size:1.7rem;margin-bottom:4px'>{crop['icon']}</div>"
-                f"<div style='font-weight:700;color:#2c3e50;text-align:center;font-size:1rem;"
-                f"margin-bottom:6px'>{crop_display}</div>"
-                f"<div style='text-align:center;margin-bottom:10px'>"
-                f"<span style='background:{bg_c};color:{fg_c};padding:3px 10px;border-radius:20px;"
-                f"font-size:0.76rem;font-weight:600'>{status_icon} {status_lbl}</span>"
-                f"</div>"
-                f"<div style='background:#f8f9fa;border-radius:10px;padding:10px;text-align:center'>"
-                f"<div style='font-size:0.72rem;color:#999;margin-bottom:2px'>{t('best_start')}</div>"
-                f"<div style='font-size:1.05rem;font-weight:700;color:{crop['color']}'>"
-                f"▶ {info['best_month_name']}</div>"
-                f"<div style='font-size:0.75rem;color:#999;margin-top:2px'>{t('harvest')}: {harvest_str}</div>"
-                f"</div>"
-                f"<div style='text-align:center;margin-top:8px;font-size:0.75rem;color:#888'>"
-                f"{t('prob_label')}: <b style='color:{ring_color}'>{s:.0f}%</b></div>"
-                + mini_bars +
-                f"</div>",
-                unsafe_allow_html=True,
-            )
+        adj_rain  = clim.loc[info["best_month"], "mean"] * ENSO_FACTORS[info["best_month"]][enso_phase]
+        water_lbl = t("water_ok") if adj_rain >= 150 else (t("water_warn") if adj_rain >= 100 else t("water_bad"))
+        prob_lbl  = t("prob_high") if s >= 75 else (t("prob_mid") if s >= 50 else t("prob_low"))
 
-    # Substitution tip
+        msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
+               f"**{t('farmer_best_month')}:** {info['best_month_name']}  \n"
+               f"**{t('farmer_harvest_est')}:** {harvest_str}  \n"
+               f"{prob_lbl}  \n"
+               f"{water_lbl}")
+        with col:
+            if s >= 75:
+                st.success(f"**{t('farmer_go')}**\n\n" + msg)
+            elif s >= 50:
+                st.warning(f"**{t('farmer_cau')}**\n\n" + msg)
+            else:
+                st.error(f"**{t('farmer_stop')}**\n\n" + msg)
+
+    # ── LIMIT STATE WARNINGS (tetap di tampilan utama) ───────────
     st.markdown(" ")
+    for crop_name in CROPS:
+        best_m   = upcoming[crop_name]["best_month"]
+        adj_rain = clim.loc[best_m, "mean"] * ENSO_FACTORS[best_m][enso_phase]
+        if adj_rain > 300:
+            st.warning(f"**{t(crop_name)} — {mname(best_m)}:** " + t("warn_flood"))
+        elif adj_rain < 100:
+            st.error(f"**{t(crop_name)} — {mname(best_m)}:** " + t("warn_drought"))
+
+    # ── SUBSTITUTION TIP ─────────────────────────────────────────
     best_crop = max(upcoming, key=lambda c: upcoming[c]["score"])
     if enso_phase == "El Niño" and upcoming["Rice"]["score"] < 50:
         st.info(t("tip_elnino").format(icon=CROPS["Cassava"]["icon"]))
@@ -1005,31 +1005,72 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             month=upcoming[best_crop]["best_month_name"],
         ))
 
-    # ── RAINFALL UNCERTAINTY CHART ────────────────────────────────
-    st.markdown(
-        f"<div class='section-header'>{t('sec_rainfall')}</div>",
-        unsafe_allow_html=True,
-    )
-    st.plotly_chart(make_rainfall_envelope_chart(clim, enso_phase), use_container_width=True)
-    st.caption(t("uncertainty_note"))
+    # ── TECHNICAL EXPANDER (untuk Penyuluh Pertanian) ────────────
+    with st.expander(t("tech_exp")):
+        st.caption(t("tech_exp_desc"))
 
-    # ── LIMIT STATE WARNINGS ──────────────────────────────────────
-    for crop_name in CROPS:
-        best_m    = upcoming[crop_name]["best_month"]
-        adj_rain  = clim.loc[best_m, "mean"] * ENSO_FACTORS[best_m][enso_phase]
-        crop_disp = t(crop_name)
-        if adj_rain > 300:
-            st.warning(f"**{crop_disp} — {mname(best_m)}:** " + t("warn_flood"))
-        elif adj_rain < 100:
-            st.warning(f"**{crop_disp} — {mname(best_m)}:** " + t("warn_drought"))
+        # Score ring cards
+        tech_cols = st.columns(3)
+        for col, crop_name in zip(tech_cols, CROPS.keys()):
+            info = upcoming[crop_name]
+            crop = CROPS[crop_name]
+            s    = info["score"]
+            bg_c = "#d5f5e3" if s >= 70 else ("#fef9e7" if s >= 50 else "#fadbd8")
+            fg_c = "#1a6b3c" if s >= 70 else ("#7d6608" if s >= 50 else "#922b21")
+            ring_color   = crop["color"]
+            status_lbl   = t("s_rec") if s >= 70 else (t("s_cau") if s >= 50 else t("s_not"))
+            status_icon  = "✅" if s >= 70 else ("⚠️" if s >= 50 else "❌")
+            ring_html = (
+                f"<svg viewBox='0 0 36 36' width='80' height='80' style='display:block;margin:0 auto 8px'>"
+                f"<circle cx='18' cy='18' r='15.9155' fill='none' stroke='#f0f0f0' stroke-width='3'/>"
+                f"<circle cx='18' cy='18' r='15.9155' fill='none' stroke='{ring_color}' stroke-width='3'"
+                f" stroke-dasharray='{s:.0f} {100-s:.0f}' stroke-dashoffset='25'"
+                f" stroke-linecap='round' transform='rotate(-90 18 18)'/>"
+                f"<text x='18' y='17' text-anchor='middle' dominant-baseline='middle'"
+                f" font-size='7.5' font-weight='700' fill='{ring_color}'>{s:.0f}</text>"
+                f"<text x='18' y='24' text-anchor='middle' dominant-baseline='middle'"
+                f" font-size='3.5' fill='#aaa'>/ 100</text>"
+                f"</svg>"
+            )
+            mini_bars = "<div style='margin-top:8px;border-top:1px solid #f0f0f0;padding-top:8px'>"
+            for m in next_3:
+                ms = info["all"][m]["score"]
+                bc = "#27ae60" if ms >= 70 else ("#f39c12" if ms >= 50 else "#e74c3c")
+                mini_bars += (
+                    f"<div style='display:flex;align-items:center;gap:6px;margin:4px 0'>"
+                    f"<span style='width:28px;font-size:0.72rem;color:#666;font-weight:600'>{mname(m)}</span>"
+                    f"<div style='flex:1;background:#f0f0f0;border-radius:4px;height:8px;overflow:hidden'>"
+                    f"<div style='background:{bc};width:{ms}%;height:8px;border-radius:4px'></div></div>"
+                    f"<span style='width:26px;font-size:0.7rem;text-align:right;color:{bc};font-weight:700'>{ms:.0f}</span>"
+                    f"</div>"
+                )
+            mini_bars += "</div>"
+            if crop["duration"] == 12:
+                h_str = t("perennial")
+            else:
+                h_str = f"~{mname(wrap_month(info['best_month'] + crop['duration']))}"
+            with col:
+                st.markdown(
+                    f"<div style='background:white;border-radius:14px;padding:16px;"
+                    f"box-shadow:0 2px 12px rgba(0,0,0,0.06);border-top:3px solid {ring_color}'>"
+                    + ring_html +
+                    f"<div style='text-align:center;font-size:1.4rem'>{crop['icon']}</div>"
+                    f"<div style='font-weight:700;color:#2c3e50;text-align:center;font-size:0.95rem;margin:4px 0'>{t(crop_name)}</div>"
+                    f"<div style='text-align:center;margin-bottom:8px'>"
+                    f"<span style='background:{bg_c};color:{fg_c};padding:2px 8px;border-radius:20px;font-size:0.73rem;font-weight:600'>"
+                    f"{status_icon} {status_lbl}</span></div>"
+                    f"<div style='background:#f8f9fa;border-radius:8px;padding:8px;text-align:center;font-size:0.78rem;color:#777'>"
+                    f"▶ {info['best_month_name']} · {t('harvest')}: {h_str}</div>"
+                    f"<div style='text-align:center;margin-top:6px;font-size:0.72rem;color:#999'>"
+                    f"{t('prob_label')}: <b style='color:{ring_color}'>{s:.0f}%</b></div>"
+                    + mini_bars + "</div>",
+                    unsafe_allow_html=True,
+                )
 
-    if enso_phase == "El Niño":
-        for crop_name in CROPS:
-            best_m   = upcoming[crop_name]["best_month"]
-            adj_rain = clim.loc[best_m, "mean"] * ENSO_FACTORS[best_m][enso_phase]
-            if adj_rain < 100:
-                st.error(f"**{t(crop_name)}:** " + t("warn_drought"))
-                break
+        # Rainfall chart
+        st.markdown(f"**{t('sec_rainfall')}**")
+        st.plotly_chart(make_rainfall_envelope_chart(clim, enso_phase), use_container_width=True)
+        st.caption(t("uncertainty_note"))
 
     # ── GENERAL RECOMMENDATIONS ───────────────────────────────────
     st.markdown(

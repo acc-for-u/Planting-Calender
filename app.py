@@ -1166,23 +1166,10 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         )
         st.caption(t("map_caption"))
 
-        c_left, c_right = st.columns([1, 2])
-        with c_left:
-            try:
-                st.plotly_chart(make_indonesia_context_map(), use_container_width=True)
-            except Exception:
-                pass
-        with c_right:
-            st.markdown(
-                f"<div style='padding:20px 10px'>"
-                f"<div style='font-size:1.05rem;font-weight:700;color:#c0392b;margin-bottom:8px'>"
-                f"{t('kalteng_label')}</div>"
-                f"<p style='color:#555;font-size:0.9rem'>{t('kalteng_desc')}</p>"
-                f"<ul style='color:#555;font-size:0.88rem;margin-top:8px'>"
-                f"{t('kalteng_area')}{t('kalteng_src')}{t('kalteng_per')}"
-                f"</ul></div>",
-                unsafe_allow_html=True,
-            )
+        try:
+            st.plotly_chart(make_indonesia_context_map(), use_container_width=True)
+        except Exception:
+            pass
 
         try:
             b_lats, b_lons, _ = load_kabupaten_boundaries(DEFAULT_SHP_PATH)

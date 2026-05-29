@@ -1203,6 +1203,8 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                 st.plotly_chart(fig, use_container_width=True)
 
 
+        st.caption("⬜ Titik abu-abu = Lahan gambut — tidak dinilai kesesuaiannya.")
+
         # ── KECAMATAN TABLE ───────────────────────────────────────
         with st.expander(t("sub_exp")):
             with st.spinner(t("spatial_spin")):

@@ -1015,8 +1015,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         crop_note = CROP_NOTES[crop_name][lang][enso_phase]
 
         msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
-               f"**{t('farmer_best_month')}:** {info['best_month_name']}  \n"
-               f"**{t('farmer_harvest_est')}:** {harvest_str}  \n"
                f"{prob_lbl}  \n"
                f"{water_lbl}  \n\n"
                f"*{crop_note}*")

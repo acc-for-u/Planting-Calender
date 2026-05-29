@@ -1010,14 +1010,9 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         water_lbl = t("water_ok") if n_deficit == 0 else (t("water_warn") if n_deficit <= 2 else t("water_bad"))
         prob_lbl  = t("prob_high") if s >= 75 else (t("prob_mid") if s >= 50 else t("prob_low"))
 
-        # Crop-specific ENSO note
-        lang = st.session_state.get("lang", "en")
-        crop_note = CROP_NOTES[crop_name][lang][enso_phase]
-
         msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
                f"{prob_lbl}  \n"
-               f"{water_lbl}  \n\n"
-               f"*{crop_note}*")
+               f"{water_lbl}")
         with col:
             if s >= 75:
                 st.success(f"**{t('farmer_go')}**\n\n" + msg)

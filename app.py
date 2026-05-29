@@ -1202,8 +1202,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                     )
                 st.plotly_chart(fig, use_container_width=True)
 
-        if peat_mask is not None and n_peat > 0:
-            st.caption(t("peat_cap").format(n=f"{n_peat:,}", total=f"{len(grid_clim.columns):,}"))
 
         # ── KECAMATAN TABLE ───────────────────────────────────────
         with st.expander(t("sub_exp")):

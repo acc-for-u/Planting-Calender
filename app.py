@@ -1239,31 +1239,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                 use_container_width=True, hide_index=True,
             )
 
-        # ── LAND COVER MAP ────────────────────────────────────────
-        with st.expander(t("lc_exp")):
-            st.caption(t("lc_cap"))
-            with st.spinner(t("lc_spin")):
-                lc_traces = load_landcover(DEFAULT_LC_PATH)
-            if lc_traces:
-                fig_lc = make_landcover_map(lc_traces, b_lats, b_lons)
-                st.plotly_chart(fig_lc, use_container_width=True)
-
-                col_a, col_b = st.columns([3, 2])
-                with col_a:
-                    st.markdown(t("lc_leg"))
-                    for cat, d in lc_traces.items():
-                        icon = LC_STYLE.get(cat, {}).get("icon", "")
-                        st.markdown(
-                            f"<span style='display:inline-block;width:14px;height:14px;"
-                            f"background:{d['color']};border-radius:2px;margin-right:6px'></span>"
-                            f"{icon} **{cat}** — {d['luas_rb_ha']:,.0f} ribu ha",
-                            unsafe_allow_html=True,
-                        )
-                with col_b:
-                    st.markdown(t("lc_notes_h"))
-                    st.markdown(t("lc_notes"))
-            else:
-                st.warning(t("lc_nodata"))
 
 
 # =====================================================================

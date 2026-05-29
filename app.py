@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-
+import requests
 import datetime
 import warnings
 import geopandas as gpd
@@ -257,6 +257,9 @@ T = {
         "cal_note": "Based on 30-year climatology adjusted for current ENSO condition.",
         "col_month": "Month",
         "this_month": "← Now",
+        "forecast_on":  "🛰️ Using real-time rainfall forecast from Open-Meteo (updated hourly). Next 3 months reflect actual predicted rainfall.",
+        "forecast_off": "📊 Using 30-year historical climatology (Open-Meteo unavailable). Connect to internet for real-time forecast.",
+        "forecast_rain": "Forecast rainfall",
         "prob_label": "Success probability",
         "uncertainty_note": ("⚠️ **Climate Uncertainty:** Historical data has natural variability. "
                              "Shaded area shows the range of possible rainfall based on 30-year records. "
@@ -371,6 +374,9 @@ T = {
         "cal_note": "Berdasarkan klimatologi 30 tahun yang disesuaikan dengan kondisi ENSO saat ini.",
         "col_month": "Bulan",
         "this_month": "← Sekarang",
+        "forecast_on":  "🛰️ Menggunakan prakiraan curah hujan real-time dari Open-Meteo (diperbarui setiap jam). 3 bulan ke depan mencerminkan curah hujan prediksi aktual.",
+        "forecast_off": "📊 Menggunakan klimatologi historis 30 tahun (Open-Meteo tidak tersedia). Hubungkan ke internet untuk prakiraan real-time.",
+        "forecast_rain": "Prakiraan curah hujan",
         "prob_label": "Peluang keberhasilan",
         "uncertainty_note": ("⚠️ **Ketidakpastian Iklim:** Data historis memiliki variabilitas alami. "
                              "Area bayangan menunjukkan rentang kemungkinan curah hujan berdasarkan data 30 tahun. "
@@ -414,6 +420,33 @@ def t(key):
 
 def mname(m):
     return t("months")[m - 1]
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def fetch_openmeteo_forecast():
+    """Fetch 3-month rainfall forecast from Open-Meteo for Central Kalimantan (-1.5, 113.5)."""
+    try:
+        resp = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": -1.5,
+                "longitude": 113.5,
+                "monthly": "precipitation_sum",
+                "timezone": "Asia/Jakarta",
+                "forecast_months": 3,
+            },
+            timeout=8,
+        )
+        resp.raise_for_status()
+        monthly = resp.json().get("monthly", {})
+        times   = monthly.get("time", [])
+        precip  = monthly.get("precipitation_sum", [])
+        result  = {}
+        for t_str, p in zip(times, precip):
+            if p is not None:
+                result[pd.Timestamp(t_str).month] = float(p)
+        return result if result else None
+    except Exception:
+        return None
 
 # =====================================================================
 # HELPERS
@@ -957,6 +990,16 @@ def make_rainfall_envelope_chart(clim, enso_phase):
 def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
     current_month = datetime.datetime.now().month
 
+    # ── Open-Meteo forecast — patch clim for next 3 months ───────
+    forecast_rain = fetch_openmeteo_forecast()
+    if forecast_rain:
+        clim = clim.copy()
+        for m, rain in forecast_rain.items():
+            clim.loc[m, "mean"] = rain
+        st.info(t("forecast_on"))
+    else:
+        st.caption(t("forecast_off"))
+
     # ── Climate banner ────────────────────────────────────────────
     banner_cfg = {
         "Neutral": ("🟢", "#d5f5e3", "#1a6b3c", "#27ae60"),
@@ -1077,6 +1120,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         is_now    = (m == current_month)
         month_lbl = mname(m) + (f" <b style='color:#e74c3c'>{t('this_month')}</b>" if is_now else "")
         row_bg    = "background:#fffbe6;" if is_now else ""
+        rain_mm = forecast_rain.get(m, clim.loc[m, "mean"]) if forecast_rain else clim.loc[m, "mean"]
         cells = ""
         for crop_name in crop_names:
             s  = planting_score(clim, crop_name, m, oni_val)["score"]
@@ -1091,10 +1135,12 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                 f"font-size:0.82rem;font-weight:600;border-radius:6px'>"
                 f"{emoji} {label}</td>"
             )
+        rain_src = "🛰️" if (forecast_rain and m in forecast_rain) else "📊"
         rows_html += (
             f"<tr style='{row_bg}'>"
             f"<td style='padding:8px 12px;font-weight:{'700' if is_now else '400'};"
-            f"font-size:0.85rem;white-space:nowrap'>{month_lbl}</td>"
+            f"font-size:0.85rem;white-space:nowrap'>{month_lbl}"
+            f"<br><span style='font-size:0.72rem;color:#999'>{rain_src} {rain_mm:.0f} mm</span></td>"
             f"{cells}</tr>"
         )
 

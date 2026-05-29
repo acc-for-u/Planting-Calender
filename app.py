@@ -214,6 +214,25 @@ T = {
                      "- Data: KLHK 2021 · Scale 1:250,000"),
         "lc_nodata": "Land cover data not available.",
         "source_noaa": "Source: NOAA",
+        "prob_label": "Success probability",
+        "uncertainty_note": ("⚠️ **Climate Uncertainty:** Historical data has natural variability. "
+                             "Shaded area shows the range of possible rainfall based on 30-year records. "
+                             "Actual conditions may differ, especially during ENSO events."),
+        "sec_rainfall": "📈 Monthly Rainfall Outlook & Climate Uncertainty",
+        "chart_clim": "30-yr Climatology (mean)",
+        "chart_enso": "ENSO-adjusted",
+        "chart_upper": "Upper bound (flood risk scenario)",
+        "chart_lower": "Lower bound (drought risk scenario)",
+        "chart_flood_thresh": "Flood risk threshold (300 mm)",
+        "chart_drought_thresh": "Drought risk threshold (100 mm)",
+        "warn_flood": ("🚨 **FLOOD RISK WARNING** — Rainfall in this period is projected above **300 mm/month**. "
+                       "In peatland-dominated areas of Central Kalimantan, this may trigger compound flooding. "
+                       "**Check micro-drainage channels before planting.** Avoid low-lying fields near river margins."),
+        "warn_drought": ("🏜️ **DROUGHT RISK WARNING** — Rainfall projected below **100 mm/month**. "
+                         "Water deficit may significantly reduce crop yields. "
+                         "**Prepare supplemental irrigation** or consider delaying planting."),
+        "warn_peat": ("🟤 **PEATLAND AREA NOTICE** — Agricultural activities on peatland carry additional risk of "
+                      "subsidence and fire during dry spells. Consult BRG guidelines before proceeding."),
     },
     "id": {
         "brand": "Kalender Tanam", "region": "KALIMANTAN TENGAH",
@@ -289,6 +308,25 @@ T = {
                      "- Data: KLHK 2021 · Skala 1:250.000"),
         "lc_nodata": "Data tutupan lahan tidak tersedia.",
         "source_noaa": "Sumber: NOAA",
+        "prob_label": "Peluang keberhasilan",
+        "uncertainty_note": ("⚠️ **Ketidakpastian Iklim:** Data historis memiliki variabilitas alami. "
+                             "Area bayangan menunjukkan rentang kemungkinan curah hujan berdasarkan data 30 tahun. "
+                             "Kondisi aktual bisa berbeda, terutama saat kejadian ENSO."),
+        "sec_rainfall": "📈 Prakiraan Curah Hujan Bulanan & Ketidakpastian Iklim",
+        "chart_clim": "Klimatologi 30 tahun (rerata)",
+        "chart_enso": "Disesuaikan ENSO",
+        "chart_upper": "Batas atas (skenario risiko banjir)",
+        "chart_lower": "Batas bawah (skenario risiko kekeringan)",
+        "chart_flood_thresh": "Batas risiko banjir (300 mm)",
+        "chart_drought_thresh": "Batas risiko kekeringan (100 mm)",
+        "warn_flood": ("🚨 **PERINGATAN RISIKO BANJIR** — Curah hujan pada periode ini diperkirakan di atas **300 mm/bulan**. "
+                       "Di wilayah gambut Kalimantan Tengah, ini dapat memicu genangan majemuk (compound flooding). "
+                       "**Periksa saluran drainase mikro sebelum menanam.** Hindari lahan rendah dekat tepian sungai."),
+        "warn_drought": ("🏜️ **PERINGATAN RISIKO KEKERINGAN** — Curah hujan diperkirakan di bawah **100 mm/bulan**. "
+                         "Defisit air dapat menurunkan hasil panen secara signifikan. "
+                         "**Siapkan irigasi tambahan** atau pertimbangkan menunda waktu tanam."),
+        "warn_peat": ("🟤 **PERHATIAN LAHAN GAMBUT** — Aktivitas pertanian di lahan gambut berisiko penurunan muka tanah "
+                      "dan kebakaran saat musim kering. Konsultasikan dengan pedoman BRG sebelum memulai."),
     },
 }
 
@@ -762,6 +800,79 @@ def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
     return fig
 
 # =====================================================================
+# RAINFALL UNCERTAINTY CHART
+# =====================================================================
+def make_rainfall_envelope_chart(clim, enso_phase):
+    months       = list(range(1, 13))
+    month_labels = [mname(m) for m in months]
+    mean_rain    = [float(clim.loc[m, "mean"]) for m in months]
+    std_rain     = [float(clim.loc[m, "std"])  for m in months]
+    adj_rain     = [clim.loc[m, "mean"] * ENSO_FACTORS[m][enso_phase] for m in months]
+    upper = [mean_rain[i] + 1.5 * std_rain[i] for i in range(12)]
+    lower = [max(0, mean_rain[i] - 1.5 * std_rain[i]) for i in range(12)]
+
+    enso_color = {"El Niño": "#e74c3c", "La Niña": "#2980b9", "Neutral": "#27ae60"}[enso_phase]
+
+    fig = go.Figure()
+
+    # Uncertainty envelope (shaded)
+    fig.add_trace(go.Scatter(
+        x=month_labels + month_labels[::-1],
+        y=upper + lower[::-1],
+        fill="toself",
+        fillcolor="rgba(39,174,96,0.12)",
+        line=dict(color="rgba(0,0,0,0)"),
+        name=t("chart_upper"),
+        hoverinfo="skip",
+        showlegend=True,
+    ))
+
+    # Climatological mean
+    fig.add_trace(go.Scatter(
+        x=month_labels, y=mean_rain,
+        mode="lines+markers",
+        line=dict(color="#27ae60", width=2, dash="dash"),
+        marker=dict(size=6, color="#27ae60"),
+        name=t("chart_clim"),
+    ))
+
+    # ENSO-adjusted line
+    fig.add_trace(go.Scatter(
+        x=month_labels, y=adj_rain,
+        mode="lines+markers",
+        line=dict(color=enso_color, width=3),
+        marker=dict(size=8, color=enso_color),
+        name=f"{t('chart_enso')} ({enso_phase})",
+    ))
+
+    # Flood risk threshold
+    fig.add_hline(y=300, line_dash="dot", line_color="#e74c3c", line_width=1.5,
+                  annotation_text=t("chart_flood_thresh"),
+                  annotation_position="top right",
+                  annotation_font_color="#e74c3c",
+                  annotation_font_size=11)
+
+    # Drought risk threshold
+    fig.add_hline(y=100, line_dash="dot", line_color="#f39c12", line_width=1.5,
+                  annotation_text=t("chart_drought_thresh"),
+                  annotation_position="bottom right",
+                  annotation_font_color="#f39c12",
+                  annotation_font_size=11)
+
+    fig.update_layout(
+        height=350,
+        margin=dict(l=10, r=10, t=20, b=10),
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.88)",
+                    bordercolor="#eee", borderwidth=1, font=dict(size=11)),
+        yaxis_title="Rainfall (mm/month)",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        xaxis=dict(showgrid=False),
+        yaxis=dict(gridcolor="#f0f0f0", zeroline=False, rangemode="tozero"),
+    )
+    return fig
+
+# =====================================================================
 # FARMER MODE
 # =====================================================================
 def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
@@ -873,6 +984,8 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                 f"▶ {info['best_month_name']}</div>"
                 f"<div style='font-size:0.75rem;color:#999;margin-top:2px'>{t('harvest')}: {harvest_str}</div>"
                 f"</div>"
+                f"<div style='text-align:center;margin-top:8px;font-size:0.75rem;color:#888'>"
+                f"{t('prob_label')}: <b style='color:{ring_color}'>{s:.0f}%</b></div>"
                 + mini_bars +
                 f"</div>",
                 unsafe_allow_html=True,
@@ -891,6 +1004,32 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             crop=t(best_crop),
             month=upcoming[best_crop]["best_month_name"],
         ))
+
+    # ── RAINFALL UNCERTAINTY CHART ────────────────────────────────
+    st.markdown(
+        f"<div class='section-header'>{t('sec_rainfall')}</div>",
+        unsafe_allow_html=True,
+    )
+    st.plotly_chart(make_rainfall_envelope_chart(clim, enso_phase), use_container_width=True)
+    st.caption(t("uncertainty_note"))
+
+    # ── LIMIT STATE WARNINGS ──────────────────────────────────────
+    for crop_name in CROPS:
+        best_m    = upcoming[crop_name]["best_month"]
+        adj_rain  = clim.loc[best_m, "mean"] * ENSO_FACTORS[best_m][enso_phase]
+        crop_disp = t(crop_name)
+        if adj_rain > 300:
+            st.warning(f"**{crop_disp} — {mname(best_m)}:** " + t("warn_flood"))
+        elif adj_rain < 100:
+            st.warning(f"**{crop_disp} — {mname(best_m)}:** " + t("warn_drought"))
+
+    if enso_phase == "El Niño":
+        for crop_name in CROPS:
+            best_m   = upcoming[crop_name]["best_month"]
+            adj_rain = clim.loc[best_m, "mean"] * ENSO_FACTORS[best_m][enso_phase]
+            if adj_rain < 100:
+                st.error(f"**{t(crop_name)}:** " + t("warn_drought"))
+                break
 
     # ── GENERAL RECOMMENDATIONS ───────────────────────────────────
     st.markdown(

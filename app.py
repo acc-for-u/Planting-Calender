@@ -125,38 +125,38 @@ LC_STYLE = {
 CROP_NOTES = {
     "Rice": {
         "en": {
-            "El Niño": "⚠️ High drought risk. Delay to Oct–Nov when rains return.",
-            "La Niña": "✅ Strong wet season ahead — excellent for rice.",
-            "Neutral": "✅ Good conditions. Oct–Nov are the optimal months.",
+            "El Niño": "Drought risk is high this season. Best to wait until Oct–Nov when rains return.",
+            "La Niña": "Wet season will be stronger than usual — favourable for rice planting.",
+            "Neutral": "Rainfall is near average. Oct–Nov give the best start for rice.",
         },
         "id": {
-            "El Niño": "⚠️ Risiko kekeringan tinggi. Tunda ke Okt–Nov saat hujan kembali.",
-            "La Niña": "✅ Musim hujan lebih kuat — sangat baik untuk padi.",
-            "Neutral": "✅ Kondisi baik. Okt–Nov adalah waktu paling optimal.",
+            "El Niño": "Risiko kekeringan tinggi musim ini. Sebaiknya tunggu Okt–Nov saat hujan kembali.",
+            "La Niña": "Musim hujan lebih kuat dari biasanya — menguntungkan untuk tanam padi.",
+            "Neutral": "Curah hujan mendekati rata-rata. Okt–Nov memberi awal tanam terbaik untuk padi.",
         },
     },
     "Oil Palm": {
         "en": {
-            "El Niño": "⚠️ Prepare water reserves. Yield may drop ~20% during dry spell.",
-            "La Niña": "✅ Good conditions. Maintain drainage to prevent root rot.",
-            "Neutral": "✅ Stable year-round crop. Suitable for planting any month.",
+            "El Niño": "Dry spell may reduce yield ~20%. Secure water reserves before planting.",
+            "La Niña": "Rainfall above average. Maintain field drainage to protect roots.",
+            "Neutral": "Stable conditions — oil palm can be established in any month of the year.",
         },
         "id": {
-            "El Niño": "⚠️ Siapkan cadangan air. Produksi bisa turun ~20% saat kemarau.",
-            "La Niña": "✅ Kondisi bagus. Jaga drainase agar akar tidak busuk.",
-            "Neutral": "✅ Stabil sepanjang tahun. Cocok ditanam bulan apa pun.",
+            "El Niño": "Kemarau dapat menurunkan produksi ~20%. Siapkan cadangan air sebelum tanam.",
+            "La Niña": "Curah hujan di atas rata-rata. Jaga drainase lahan agar akar tidak busuk.",
+            "Neutral": "Kondisi stabil — sawit dapat ditanam kapan saja sepanjang tahun.",
         },
     },
     "Cassava": {
         "en": {
-            "El Niño": "✅ Best choice during El Niño — highly drought tolerant.",
-            "La Niña": "✅ Good conditions. Ensure drainage to avoid root rot.",
-            "Neutral": "✅ Reliable choice. Oct–Dec are the optimal start months.",
+            "El Niño": "Cassava is drought-tolerant — a safe choice even when rainfall is low.",
+            "La Niña": "Higher rainfall suits cassava well. Ensure drainage to prevent tuber rot.",
+            "Neutral": "Reliable in normal conditions. Oct–Dec give the best start.",
         },
         "id": {
-            "El Niño": "✅ Pilihan terbaik saat El Niño — sangat tahan kekeringan.",
-            "La Niña": "✅ Kondisi baik. Pastikan drainase cukup agar umbi tidak busuk.",
-            "Neutral": "✅ Pilihan aman. Okt–Des adalah waktu tanam paling optimal.",
+            "El Niño": "Singkong tahan kekeringan — pilihan aman meski curah hujan rendah.",
+            "La Niña": "Hujan lebih banyak cocok untuk singkong. Pastikan drainase baik agar umbi tidak busuk.",
+            "Neutral": "Andalan di kondisi normal. Okt–Des memberi awal tanam terbaik.",
         },
     },
 }

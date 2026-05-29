@@ -1203,7 +1203,10 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                 st.plotly_chart(fig, use_container_width=True)
 
 
-        st.caption("⬜ Titik abu-abu = Lahan gambut — tidak dinilai kesesuaiannya.")
+        _peat_cap = ("⬜ Grey points = Peatland — suitability not assessed."
+                     if st.session_state.get("lang","en") == "en" else
+                     "⬜ Titik abu-abu = Lahan gambut — tidak dinilai kesesuaiannya.")
+        st.caption(_peat_cap)
 
         # ── KECAMATAN TABLE ───────────────────────────────────────
         with st.expander(t("sub_exp")):

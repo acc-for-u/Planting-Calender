@@ -984,6 +984,51 @@ def make_rainfall_envelope_chart(clim, enso_phase):
     )
     return fig
 
+def make_kabupaten_rainfall_chart(grid_clim, mapping, kab_name, enso_phase):
+    cols = [col for col, (kab, _) in mapping.items() if kab == kab_name]
+    if not cols:
+        return None
+    monthly_mean = grid_clim[cols].mean(axis=1)
+    months       = list(range(1, 13))
+    month_labels = [mname(m) for m in months]
+    means        = [float(monthly_mean.loc[m]) for m in months]
+    adj          = [means[m - 1] * ENSO_FACTORS[m][enso_phase] for m in months]
+    enso_color   = {"El Niño": "#e74c3c", "La Niña": "#2980b9", "Neutral": "#27ae60"}[enso_phase]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=month_labels, y=means,
+        name=t("chart_clim"),
+        marker_color="#27ae60", opacity=0.6,
+    ))
+    fig.add_trace(go.Scatter(
+        x=month_labels, y=adj,
+        mode="lines+markers",
+        line=dict(color=enso_color, width=2.5),
+        marker=dict(size=7, color=enso_color),
+        name=f"{t('chart_enso')} ({enso_phase})",
+    ))
+    fig.add_hline(y=300, line_dash="dot", line_color="#e74c3c", line_width=1.5,
+                  annotation_text=t("chart_flood_thresh"),
+                  annotation_position="top right",
+                  annotation_font_color="#e74c3c", annotation_font_size=11)
+    fig.add_hline(y=100, line_dash="dot", line_color="#f39c12", line_width=1.5,
+                  annotation_text=t("chart_drought_thresh"),
+                  annotation_position="bottom right",
+                  annotation_font_color="#f39c12", annotation_font_size=11)
+    fig.update_layout(
+        height=320,
+        margin=dict(l=10, r=10, t=20, b=10),
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.88)",
+                    bordercolor="#eee", borderwidth=1, font=dict(size=11)),
+        yaxis_title="Rainfall (mm/month)",
+        plot_bgcolor="white", paper_bgcolor="white",
+        xaxis=dict(showgrid=False),
+        yaxis=dict(gridcolor="#f0f0f0", zeroline=False, rangemode="tozero"),
+    )
+    return fig
+
+
 # =====================================================================
 # FARMER MODE
 # =====================================================================
@@ -1155,7 +1200,31 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
     )
     st.markdown(table_html, unsafe_allow_html=True)
 
+    # ── RAINFALL CHART ────────────────────────────────────────────
+    st.markdown(
+        f"<div class='section-header'>{t('sec_rainfall')}</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption(t("cal_note"))
 
+    if grid_clim is not None:
+        mapping_rain  = load_kecamatan_mapping(tuple(grid_clim.columns.tolist()))
+        kab_list_rain = sorted({kab for kab, _ in mapping_rain.values() if kab is not None})
+        all_lbl       = "📍 All Kalteng" if st.session_state.get("lang", "en") == "en" else "📍 Seluruh Kalteng"
+        selected_kab_rain = st.selectbox(
+            "Select area:" if st.session_state.get("lang", "en") == "en" else "Pilih wilayah:",
+            [all_lbl] + kab_list_rain,
+            key="rain_kab_sel",
+        )
+        if selected_kab_rain == all_lbl:
+            fig_rain = make_rainfall_envelope_chart(clim, enso_phase)
+        else:
+            fig_rain = make_kabupaten_rainfall_chart(grid_clim, mapping_rain, selected_kab_rain, enso_phase)
+    else:
+        fig_rain = make_rainfall_envelope_chart(clim, enso_phase)
+
+    if fig_rain:
+        st.plotly_chart(fig_rain, use_container_width=True)
 
     # ── BEST CROP MAP (next 3 months) ────────────────────────────
     if grid_clim is not None:

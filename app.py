@@ -172,23 +172,20 @@ CROP_NOTES = {
 }
 
 ENSO_OPTIONS = {
-    "🟢  Normal":                                           ("Neutral",       0.0),
-    "🟡  Mild El Niño  (slightly drier than usual)":       ("Mild El Niño",  1.2),
-    "🔴  Strong El Niño  (drought risk)":                  ("Strong El Niño", 1.8),
-    "🔵  Mild La Niña  (wetter than usual)":               ("Mild La Niña",  -1.2),
-    "🌊  Strong La Niña  (heavy rain risk)":               ("Strong La Niña", -1.8),
+    "🟢  Normal":    ("Neutral",       0.0),
+    "🔴  El Niño":   ("El Niño",       1.2),
+    "🔵  La Niña":   ("La Niña",      -1.2),
+    # kept for auto-detection by ONI magnitude
+    "🟡  Mild El Niño":   ("Mild El Niño",   1.2),
+    "🔴  Strong El Niño": ("Strong El Niño", 1.8),
+    "🔵  Mild La Niña":   ("Mild La Niña",  -1.2),
+    "🌊  Strong La Niña": ("Strong La Niña", -1.8),
 }
 
 ENSO_KEY_MAP = {
-    "🟢  Normal":                                           "🟢  Normal",
-    "🟡  Mild El Niño  (slightly drier than usual)":       "🟡  Mild El Niño  (slightly drier than usual)",
-    "🔴  Strong El Niño  (drought risk)":                  "🔴  Strong El Niño  (drought risk)",
-    "🔵  Mild La Niña  (wetter than usual)":               "🔵  Mild La Niña  (wetter than usual)",
-    "🌊  Strong La Niña  (heavy rain risk)":               "🌊  Strong La Niña  (heavy rain risk)",
-    "🟡  El Niño Lemah  (sedikit lebih kering)":           "🟡  Mild El Niño  (slightly drier than usual)",
-    "🔴  El Niño Kuat  (risiko kekeringan)":               "🔴  Strong El Niño  (drought risk)",
-    "🔵  La Niña Lemah  (lebih basah dari biasanya)":      "🔵  Mild La Niña  (wetter than usual)",
-    "🌊  La Niña Kuat  (risiko hujan lebat)":              "🌊  Strong La Niña  (heavy rain risk)",
+    "🟢  Normal":  "🟢  Normal",
+    "🔴  El Niño": "🔴  El Niño",
+    "🔵  La Niña": "🔵  La Niña",
 }
 
 T = {
@@ -204,11 +201,7 @@ T = {
         "chip3": "🗺️ Spatial Analysis", "chip4": "🌾 Rice · Oil Palm · Cassava",
         "banner_Neutral": "Normal Conditions", "banner_El Niño": "El Niño Active",
         "banner_La Niña": "La Niña Active",
-        "enso_opts": ["🟢  Normal",
-                      "🟡  Mild El Niño  (slightly drier than usual)",
-                      "🔴  Strong El Niño  (drought risk)",
-                      "🔵  Mild La Niña  (wetter than usual)",
-                      "🌊  Strong La Niña  (heavy rain risk)"],
+        "enso_opts": ["🟢  Normal", "🔴  El Niño", "🔵  La Niña"],
         "sec_plant": "🗓️ Best Time to Plant — Next 3 Months",
         "sec_rec": "📋 General Recommendations",
         "sec_map": "🗺️ Best Crop per Area — Central Kalimantan",
@@ -322,11 +315,7 @@ T = {
         "chip3": "🗺️ Analisis Spasial", "chip4": "🌾 Padi · Sawit · Singkong",
         "banner_Neutral": "Kondisi Normal", "banner_El Niño": "El Niño Aktif",
         "banner_La Niña": "La Niña Aktif",
-        "enso_opts": ["🟢  Normal",
-                      "🟡  El Niño Lemah  (sedikit lebih kering)",
-                      "🔴  El Niño Kuat  (risiko kekeringan)",
-                      "🔵  La Niña Lemah  (lebih basah dari biasanya)",
-                      "🌊  La Niña Kuat  (risiko hujan lebat)"],
+        "enso_opts": ["🟢  Normal", "🔴  El Niño", "🔵  La Niña"],
         "sec_plant": "🗓️ Waktu Tanam Terbaik — 3 Bulan ke Depan",
         "sec_rec": "📋 Rekomendasi Umum",
         "sec_map": "🗺️ Komoditas Terbaik per Wilayah — Kalimantan Tengah",
@@ -1422,9 +1411,9 @@ def main():
         latest_oni, latest_date, latest_phase = 0.0, None, "Neutral"
 
     if latest_phase == "El Niño":
-        enso_key = "🔴  Strong El Niño  (drought risk)" if latest_oni >= 1.5 else "🟡  Mild El Niño  (slightly drier than usual)"
+        enso_key = "🔴  Strong El Niño" if latest_oni >= 1.5 else "🟡  Mild El Niño"
     elif latest_phase == "La Niña":
-        enso_key = "🌊  Strong La Niña  (heavy rain risk)" if latest_oni <= -1.5 else "🔵  Mild La Niña  (wetter than usual)"
+        enso_key = "🌊  Strong La Niña" if latest_oni <= -1.5 else "🔵  Mild La Niña"
     else:
         enso_key = "🟢  Normal"
 
@@ -1498,17 +1487,17 @@ def main():
         # ── Simulate scenario ─────────────────────────────────────
         with st.expander(t("simulate")):
             display_opts = t("enso_opts")
+            phase_to_simple = {"El Niño": "🔴  El Niño", "La Niña": "🔵  La Niña", "Neutral": "🟢  Normal"}
             auto_idx = next(
                 (i for i, opt in enumerate(display_opts)
-                 if ENSO_KEY_MAP.get(opt, opt) == enso_key),
+                 if opt == phase_to_simple.get(latest_phase, "🟢  Normal")),
                 0,
             )
-            sim_display = st.selectbox(t("override"), display_opts, index=auto_idx)
-            sim_key     = ENSO_KEY_MAP.get(sim_display, sim_display)
-            if sim_key != enso_key:
-                enso_key     = sim_key
-                _, oni_val   = ENSO_OPTIONS[enso_key]
-                latest_phase = classify_enso(oni_val)
+            sim_display  = st.selectbox(t("override"), display_opts, index=auto_idx)
+            sim_phase    = {"🔴  El Niño": "El Niño", "🔵  La Niña": "La Niña", "🟢  Normal": "Neutral"}[sim_display]
+            if sim_phase != latest_phase:
+                _, oni_val   = ENSO_OPTIONS[sim_display]
+                latest_phase = sim_phase
                 st.info(t("sim_warning"))
 
     page_farmer(clim, latest_phase, oni_val, grid_clim)

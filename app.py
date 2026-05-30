@@ -958,19 +958,6 @@ def make_rainfall_envelope_chart(clim, enso_phase):
     ))
 
     # Flood risk threshold
-    fig.add_hline(y=300, line_dash="dot", line_color="#e74c3c", line_width=1.5,
-                  annotation_text=t("chart_flood_thresh"),
-                  annotation_position="top right",
-                  annotation_font_color="#e74c3c",
-                  annotation_font_size=11)
-
-    # Drought risk threshold
-    fig.add_hline(y=100, line_dash="dot", line_color="#f39c12", line_width=1.5,
-                  annotation_text=t("chart_drought_thresh"),
-                  annotation_position="bottom right",
-                  annotation_font_color="#f39c12",
-                  annotation_font_size=11)
-
     fig.update_layout(
         height=350,
         margin=dict(l=10, r=10, t=20, b=10),
@@ -1008,14 +995,6 @@ def make_kabupaten_rainfall_chart(grid_clim, mapping, kab_name, enso_phase):
         marker=dict(size=7, color=enso_color),
         name=f"{t('chart_enso')} ({enso_phase})",
     ))
-    fig.add_hline(y=300, line_dash="dot", line_color="#e74c3c", line_width=1.5,
-                  annotation_text=t("chart_flood_thresh"),
-                  annotation_position="top right",
-                  annotation_font_color="#e74c3c", annotation_font_size=11)
-    fig.add_hline(y=100, line_dash="dot", line_color="#f39c12", line_width=1.5,
-                  annotation_text=t("chart_drought_thresh"),
-                  annotation_position="bottom right",
-                  annotation_font_color="#f39c12", annotation_font_size=11)
     fig.update_layout(
         height=320,
         margin=dict(l=10, r=10, t=20, b=10),

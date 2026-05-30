@@ -862,14 +862,19 @@ def score_grid_points_vec(grid_clim, crop_name, start_month, oni_val):
     return lats, lons, scores
 
 @st.cache_data(show_spinner=False)
-def compute_idw_surface(lats_src, lons_src, scores_src, resolution=0.1, power=2):
-    """IDW interpolation from source grid points to a finer regular grid (pure numpy)."""
+def compute_idw_surface(lats_src, lons_src, scores_src, resolution=0.1, power=2,
+                        bbox=None):
+    """IDW interpolation to a regular grid. bbox=(lat_min,lat_max,lon_min,lon_max)."""
     lats_src   = np.array(lats_src)
     lons_src   = np.array(lons_src)
     scores_src = np.array(scores_src, dtype=float)
 
-    lat_min, lat_max = lats_src.min() - resolution, lats_src.max() + resolution
-    lon_min, lon_max = lons_src.min() - resolution, lons_src.max() + resolution
+    if bbox:
+        lat_min, lat_max, lon_min, lon_max = bbox
+    else:
+        pad = resolution
+        lat_min, lat_max = lats_src.min() - pad, lats_src.max() + pad
+        lon_min, lon_max = lons_src.min() - pad, lons_src.max() + pad
 
     grid_lats = np.arange(lat_min, lat_max, resolution)
     grid_lons = np.arange(lon_min, lon_max, resolution)
@@ -879,10 +884,9 @@ def compute_idw_surface(lats_src, lons_src, scores_src, resolution=0.1, power=2)
 
     dlat  = glat_flat[:, np.newaxis] - lats_src[np.newaxis, :]
     dlon  = glon_flat[:, np.newaxis] - lons_src[np.newaxis, :]
-    dists = np.sqrt(dlat**2 + dlon**2)      # shape (M, N)
-
+    dists = np.sqrt(dlat**2 + dlon**2)
     eps   = 1e-10
-    w     = 1.0 / (dists + eps) ** power    # (M, N) — small eps avoids div-by-zero
+    w     = 1.0 / (dists + eps) ** power
     interp = (w * scores_src[np.newaxis, :]).sum(axis=1) / w.sum(axis=1)
 
     return tuple(glat_flat.tolist()), tuple(glon_flat.tolist()), tuple(np.clip(interp, 0, 100).tolist())
@@ -890,7 +894,8 @@ def compute_idw_surface(lats_src, lons_src, scores_src, resolution=0.1, power=2)
 def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
                   g_lats=None, g_lons=None, peat_mask=None,
                   center_lat=-1.5, center_lon=113.5, zoom=4.5,
-                  kec_lats=None, kec_lons=None):
+                  kec_lats=None, kec_lons=None,
+                  idw_resolution=0.1, idw_bbox=None):
     """Map showing suitability score for one crop across all grid points.
     peat_mask: boolean array (True = peatland) — those points shown as 'Not Assessed'.
     """
@@ -912,6 +917,8 @@ def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
         tuple(lats[j] for j in range(len(lats)) if non_peat[j]),
         tuple(lons[j] for j in range(len(lons)) if non_peat[j]),
         tuple(float(scores[j]) for j in range(len(scores)) if non_peat[j]),
+        resolution=idw_resolution,
+        bbox=idw_bbox,
     )
 
     fig = go.Figure()
@@ -1250,6 +1257,17 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             st.caption(t("map_caption"))
             clat, clon, zoom_kab = kabupaten_map_bounds(mapping_kab, selected_kab)
             kec_lats, kec_lons   = load_kecamatan_boundaries(DEFAULT_KEC_PATH, selected_kab)
+
+            # Kabupaten bounding box for fine-resolution IDW
+            kab_pts = [(float(c.split("_")[0]), float(c.split("_")[1]))
+                       for c, (kab, _) in mapping_kab.items() if kab == selected_kab]
+            if kab_pts:
+                kp_lats, kp_lons = zip(*kab_pts)
+                pad = 0.05
+                kab_bbox = (min(kp_lats)-pad, max(kp_lats)+pad,
+                            min(kp_lons)-pad, max(kp_lons)+pad)
+            else:
+                kab_bbox = None
             map_cols = st.columns(3)
             for col, crop_name in zip(map_cols, CROPS.keys()):
                 crop   = CROPS[crop_name]
@@ -1269,6 +1287,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                             b_lats, b_lons, g_lats, g_lons, peat_mask,
                             center_lat=clat, center_lon=clon, zoom=zoom_kab,
                             kec_lats=kec_lats, kec_lons=kec_lons,
+                            idw_resolution=0.03, idw_bbox=kab_bbox,
                         )
                     st.plotly_chart(fig, use_container_width=True)
             st.caption(_peat_cap)

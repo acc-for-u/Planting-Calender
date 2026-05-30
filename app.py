@@ -1361,8 +1361,10 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
     st.markdown(table_html, unsafe_allow_html=True)
 
     # ── RAINFALL CHART ────────────────────────────────────────────
+    rain_area = selected_kab if selected_kab else ("Kalimantan Tengah" if lang == "en" else "Kalimantan Tengah")
     st.markdown(
-        f"<div class='section-header'>{t('sec_rainfall')}</div>",
+        f"<div class='section-header'>{t('sec_rainfall')} "
+        f"<span style='color:#27ae60;font-weight:600;font-size:0.9rem'>📍 {rain_area}</span></div>",
         unsafe_allow_html=True,
     )
     st.caption(t("cal_note"))

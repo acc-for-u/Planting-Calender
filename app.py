@@ -1014,11 +1014,23 @@ def make_kabupaten_rainfall_chart(grid_clim, mapping, kab_name, enso_phase):
     return fig
 
 
+def get_kabupaten_clim(grid_clim, mapping, kab_name):
+    """Monthly climatology (mean + std) for a specific kabupaten, from grid_clim."""
+    cols = [col for col, (kab, _) in mapping.items() if kab == kab_name]
+    if not cols:
+        return None
+    return pd.DataFrame({
+        "mean": grid_clim[cols].mean(axis=1),
+        "std":  grid_clim[cols].std(axis=1),
+    })
+
+
 # =====================================================================
 # FARMER MODE
 # =====================================================================
 def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
     current_month = datetime.datetime.now().month
+    lang = st.session_state.get("lang", "en")
 
     # ── Open-Meteo forecast — patch clim for next 3 months ───────
     forecast_rain = fetch_openmeteo_forecast()
@@ -1026,6 +1038,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         clim = clim.copy()
         for m, rain in forecast_rain.items():
             clim.loc[m, "mean"] = rain
+    clim_kalteng = clim  # save all-Kalteng clim before possible kabupaten override
 
     # ── Climate banner ────────────────────────────────────────────
     banner_cfg = {
@@ -1048,13 +1061,35 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
 
     st.caption("📊 Indonesian Agency for Meteorology, Climatology and Geophysics · NOAA ONI")
 
+    # ── KABUPATEN SELECTOR ────────────────────────────────────────
+    selected_kab = None
+    mapping_kab  = None
+    if grid_clim is not None:
+        mapping_kab  = load_kecamatan_mapping(tuple(grid_clim.columns.tolist()))
+        kab_list     = sorted({kab for kab, _ in mapping_kab.values() if kab is not None})
+        all_lbl      = "🌏 All of Central Kalimantan" if lang == "en" else "🌏 Seluruh Kalimantan Tengah"
+        sel_label    = "📍 Select your area:" if lang == "en" else "📍 Pilih wilayah Anda:"
+        selected_kab = st.selectbox(sel_label, [all_lbl] + kab_list, key="kab_main_sel")
+
+        if selected_kab != all_lbl:
+            kab_clim = get_kabupaten_clim(grid_clim, mapping_kab, selected_kab)
+            if kab_clim is not None:
+                if forecast_rain:
+                    for m, rain in forecast_rain.items():
+                        kab_clim.loc[m, "mean"] = rain
+                clim = kab_clim
+        else:
+            selected_kab = None  # treat None as "all Kalteng"
+
     # ── WHAT TO DO IN THE NEXT 3 MONTHS ──────────────────────────
     next_3 = [wrap_month(current_month + i) for i in range(3)]
     next_3_names = [mname(m) for m in next_3]
 
+    kab_label = selected_kab if selected_kab else ("Kalimantan Tengah" if lang == "en" else "Kalimantan Tengah")
     st.markdown(
         f"<div class='section-header'>{t('sec_plant')} "
-        f"<span style='color:#888;font-weight:400;font-size:0.9rem'>({', '.join(next_3_names)})</span></div>",
+        f"<span style='color:#27ae60;font-weight:600;font-size:0.9rem'>📍 {kab_label}</span>"
+        f"<span style='color:#888;font-weight:400;font-size:0.9rem'> · ({', '.join(next_3_names)})</span></div>",
         unsafe_allow_html=True,
     )
 
@@ -1184,21 +1219,10 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
     )
     st.caption(t("cal_note"))
 
-    if grid_clim is not None:
-        mapping_rain  = load_kecamatan_mapping(tuple(grid_clim.columns.tolist()))
-        kab_list_rain = sorted({kab for kab, _ in mapping_rain.values() if kab is not None})
-        all_lbl       = "📍 All Kalteng" if st.session_state.get("lang", "en") == "en" else "📍 Seluruh Kalteng"
-        selected_kab_rain = st.selectbox(
-            "Select area:" if st.session_state.get("lang", "en") == "en" else "Pilih wilayah:",
-            [all_lbl] + kab_list_rain,
-            key="rain_kab_sel",
-        )
-        if selected_kab_rain == all_lbl:
-            fig_rain = make_rainfall_envelope_chart(clim, enso_phase)
-        else:
-            fig_rain = make_kabupaten_rainfall_chart(grid_clim, mapping_rain, selected_kab_rain, enso_phase)
+    if grid_clim is not None and selected_kab and mapping_kab:
+        fig_rain = make_kabupaten_rainfall_chart(grid_clim, mapping_kab, selected_kab, enso_phase)
     else:
-        fig_rain = make_rainfall_envelope_chart(clim, enso_phase)
+        fig_rain = make_rainfall_envelope_chart(clim_kalteng, enso_phase)
 
     if fig_rain:
         st.plotly_chart(fig_rain, use_container_width=True)

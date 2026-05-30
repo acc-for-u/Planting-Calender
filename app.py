@@ -861,6 +861,32 @@ def score_grid_points_vec(grid_clim, crop_name, start_month, oni_val):
 
     return lats, lons, scores
 
+@st.cache_data(show_spinner=False)
+def compute_idw_surface(lats_src, lons_src, scores_src, resolution=0.1, power=2):
+    """IDW interpolation from source grid points to a finer regular grid (pure numpy)."""
+    lats_src   = np.array(lats_src)
+    lons_src   = np.array(lons_src)
+    scores_src = np.array(scores_src, dtype=float)
+
+    lat_min, lat_max = lats_src.min() - resolution, lats_src.max() + resolution
+    lon_min, lon_max = lons_src.min() - resolution, lons_src.max() + resolution
+
+    grid_lats = np.arange(lat_min, lat_max, resolution)
+    grid_lons = np.arange(lon_min, lon_max, resolution)
+    glon_2d, glat_2d = np.meshgrid(grid_lons, grid_lats)
+    glat_flat = glat_2d.flatten()
+    glon_flat = glon_2d.flatten()
+
+    dlat  = glat_flat[:, np.newaxis] - lats_src[np.newaxis, :]
+    dlon  = glon_flat[:, np.newaxis] - lons_src[np.newaxis, :]
+    dists = np.sqrt(dlat**2 + dlon**2)      # shape (M, N)
+
+    eps   = 1e-10
+    w     = 1.0 / (dists + eps) ** power    # (M, N) — small eps avoids div-by-zero
+    interp = (w * scores_src[np.newaxis, :]).sum(axis=1) / w.sum(axis=1)
+
+    return tuple(glat_flat.tolist()), tuple(glon_flat.tolist()), tuple(np.clip(interp, 0, 100).tolist())
+
 def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
                   g_lats=None, g_lons=None, peat_mask=None,
                   center_lat=-1.5, center_lon=113.5, zoom=4.5,
@@ -881,31 +907,40 @@ def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
         ("❌ Not Advised", "#e74c3c", (scores < 50) & non_peat),
     ]
 
-    fig = go.Figure()
-    for label, color, mask in tiers:
-        mask = mask.astype(bool)
-        if not mask.any():
-            continue
-        fig.add_trace(go.Scattermapbox(
-            lat=[lats[j] for j in range(len(lats)) if mask[j]],
-            lon=[lons[j] for j in range(len(lons)) if mask[j]],
-            mode="markers",
-            marker=dict(size=6, color=color, opacity=0.75),
-            name=label,
-            text=[f"Score: {scores[j]:.0f}" for j in range(len(lats)) if mask[j]],
-            hovertemplate="%{text}<extra></extra>",
-        ))
+    # IDW surface (non-peatland only)
+    idw_lats, idw_lons, idw_scores = compute_idw_surface(
+        tuple(lats[j] for j in range(len(lats)) if non_peat[j]),
+        tuple(lons[j] for j in range(len(lons)) if non_peat[j]),
+        tuple(float(scores[j]) for j in range(len(scores)) if non_peat[j]),
+    )
 
-    # Peatland grid points — shown as grey "Not Assessed"
+    fig = go.Figure()
+    fig.add_trace(go.Scattermapbox(
+        lat=list(idw_lats), lon=list(idw_lons),
+        mode="markers",
+        marker=dict(
+            size=5,
+            color=list(idw_scores),
+            colorscale=[[0.0, "#e74c3c"], [0.5, "#f39c12"], [0.75, "#f1c40f"], [1.0, "#27ae60"]],
+            cmin=0, cmax=100,
+            opacity=0.85,
+            colorbar=dict(title="Score", thickness=10, len=0.55, x=1.0,
+                          tickvals=[0, 25, 50, 75, 100]),
+        ),
+        hovertemplate="Score: %{marker.color:.0f}<extra></extra>",
+        showlegend=False,
+    ))
+
+    # Peatland points — grey overlay
     if peat_mask is not None and peat_mask.any():
         pm = peat_mask.astype(bool)
         fig.add_trace(go.Scattermapbox(
             lat=[lats[j] for j in range(len(lats)) if pm[j]],
             lon=[lons[j] for j in range(len(lons)) if pm[j]],
             mode="markers",
-            marker=dict(size=6, color="#95a5a6", opacity=0.6),
+            marker=dict(size=5, color="#95a5a6", opacity=0.5),
             name="⬜ Not Assessed (Peatland)",
-            hovertemplate="Peatland (gambut)<br>Water balance not applicable here<extra></extra>",
+            hovertemplate="Peatland (gambut)<extra></extra>",
         ))
 
     # Peatland boundary outline

@@ -840,7 +840,8 @@ def score_grid_points_vec(grid_clim, crop_name, start_month, oni_val):
     return lats, lons, scores
 
 def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
-                  g_lats=None, g_lons=None, peat_mask=None):
+                  g_lats=None, g_lons=None, peat_mask=None,
+                  center_lat=-1.5, center_lon=113.5, zoom=4.5):
     """Map showing suitability score for one crop across all grid points.
     peat_mask: boolean array (True = peatland) — those points shown as 'Not Assessed'.
     """
@@ -904,7 +905,7 @@ def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
 
     fig.update_layout(
         mapbox_style="carto-positron",
-        mapbox=dict(center=dict(lat=-1.5, lon=113.5), zoom=4.5),
+        mapbox=dict(center=dict(lat=center_lat, lon=center_lon), zoom=zoom),
         height=370,
         margin=dict(l=0, r=0, t=0, b=0),
         legend=dict(
@@ -1012,6 +1013,20 @@ def make_kabupaten_rainfall_chart(grid_clim, mapping, kab_name, enso_phase):
         yaxis=dict(gridcolor="#f0f0f0", zeroline=False, rangemode="tozero"),
     )
     return fig
+
+
+def kabupaten_map_bounds(mapping, kab_name):
+    """Return (center_lat, center_lon, zoom) for a kabupaten's grid points."""
+    pts = [(float(c.split("_")[0]), float(c.split("_")[1]))
+           for c, (kab, _) in mapping.items() if kab == kab_name]
+    if not pts:
+        return -1.5, 113.5, 4.5
+    lats, lons = zip(*pts)
+    clat = (min(lats) + max(lats)) / 2
+    clon = (min(lons) + max(lons)) / 2
+    extent = max(max(lats) - min(lats), max(lons) - min(lons))
+    zoom = 8.0 if extent < 1 else 7.0 if extent < 2 else 6.5 if extent < 3 else 5.5
+    return clat, clon, zoom
 
 
 def get_kabupaten_clim(grid_clim, mapping, kab_name):
@@ -1227,84 +1242,23 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
     if fig_rain:
         st.plotly_chart(fig_rain, use_container_width=True)
 
-    # ── BEST CROP MAP (next 3 months) ────────────────────────────
+    # ── MAPS + KECAMATAN ─────────────────────────────────────────
     if grid_clim is not None:
-        st.markdown(
-            f"<div class='section-header'>{t('sec_map')}</div>",
-            unsafe_allow_html=True,
-        )
-        st.caption(t("map_caption"))
-
-        try:
-            st.plotly_chart(make_indonesia_context_map(), use_container_width=True)
-        except Exception:
-            pass
-
         try:
             b_lats, b_lons, _ = load_kabupaten_boundaries(DEFAULT_SHP_PATH)
         except Exception:
             b_lats, b_lons = [], []
-
         g_lats, g_lons = load_peatland_overlay(DEFAULT_GAMBUT_PATH)
-
         with st.spinner(t("peat_spin")):
-            peat_mask, n_peat = compute_peatland_mask(
+            peat_mask, _ = compute_peatland_mask(
                 tuple(grid_clim.columns.tolist()), DEFAULT_GAMBUT_PATH
             )
 
-        map_cols = st.columns(3)
-        for col, crop_name in zip(map_cols, CROPS.keys()):
-            crop   = CROPS[crop_name]
-            best_m = upcoming[crop_name]["best_month"]
-            with col:
-                st.markdown(
-                    f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
-                    f"color:{crop['color']};margin-bottom:4px'>"
-                    f"{crop['icon']} {t(crop_name)}</div>"
-                    f"<div style='text-align:center;font-size:0.82rem;color:#555;margin-bottom:6px'>"
-                    f"{t('start_in')} {mname(best_m)}</div>",
-                    unsafe_allow_html=True,
-                )
-                with st.spinner(f"{t(crop_name)}..."):
-                    fig = make_crop_map(
-                        grid_clim, crop_name, best_m, oni_val,
-                        b_lats, b_lons, g_lats, g_lons, peat_mask,
-                    )
-                st.plotly_chart(fig, use_container_width=True)
+        _peat_cap = ("⬜ Grey = Peatland — suitability not assessed."
+                     if lang == "en" else
+                     "⬜ Abu-abu = Lahan gambut — tidak dinilai.")
 
-
-        _peat_cap = ("⬜ Grey points = Peatland — suitability not assessed."
-                     if st.session_state.get("lang","en") == "en" else
-                     "⬜ Titik abu-abu = Lahan gambut — tidak dinilai kesesuaiannya.")
-        st.caption(_peat_cap)
-
-        # ── KECAMATAN TABLE ───────────────────────────────────────
-        with st.expander(t("sub_exp")):
-            with st.spinner(t("spatial_spin")):
-                mapping = load_kecamatan_mapping(tuple(grid_clim.columns.tolist()))
-
-            all_rows = []
-            for crop_name in CROPS:
-                best_m = upcoming[crop_name]["best_month"]
-                rows   = kecamatan_summary(grid_clim, crop_name, best_m, oni_val, mapping)
-                for r in rows:
-                    r["Commodity"]   = f"{CROPS[crop_name]['icon']} {t(crop_name)}"
-                    r["Start Month"] = mname(best_m)
-                    r["Status"]      = (
-                        f"✅ {t('s_rec')}" if r["score"] >= 75 else
-                        f"⚠️ {t('s_cau')}" if r["score"] >= 50 else
-                        f"❌ {t('s_not')}"
-                    )
-                all_rows.extend(rows)
-
-            df_all   = pd.DataFrame(all_rows)
-            df_pivot = df_all.pivot_table(
-                index=["Kabupaten", "Kecamatan"],
-                columns="Commodity", values="Status", aggfunc="first",
-            ).reset_index()
-            df_pivot.columns.name = None
-            df_pivot = df_pivot.rename(columns={"Kecamatan": t("sub_col")})
-
+        def _render_kec_table(df_filtered):
             st.markdown(
                 f"<div style='display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap'>"
                 f"<span style='background:#d5f5e3;color:#1a6b3c;padding:4px 10px;"
@@ -1313,26 +1267,115 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                 f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_cau')}</span>"
                 f"<span style='background:#fadbd8;color:#922b21;padding:4px 10px;"
                 f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_not')}</span>"
-                f"</div>",
-                unsafe_allow_html=True,
+                f"</div>", unsafe_allow_html=True,
             )
-
-            kabupaten_list = sorted(df_pivot["Kabupaten"].unique())
-            selected_kab   = st.selectbox(t("sub_sel"), kabupaten_list)
-            df_filtered    = df_pivot[df_pivot["Kabupaten"] == selected_kab].drop(
-                columns=["Kabupaten"]).reset_index(drop=True)
-
             def color_status(v):
                 if "✅" in str(v): return "background-color:#d5f5e3;color:#1a6b3c"
                 if "⚠️" in str(v): return "background-color:#fef9e7;color:#7d6608"
                 if "❌" in str(v): return "background-color:#fadbd8;color:#922b21"
                 return ""
-
             crop_cols = [c for c in df_filtered.columns if c != t("sub_col")]
-            st.dataframe(
-                df_filtered.style.map(color_status, subset=crop_cols),
-                use_container_width=True, hide_index=True,
+            st.dataframe(df_filtered.style.map(color_status, subset=crop_cols),
+                         use_container_width=True, hide_index=True)
+
+        def _build_kec_pivot():
+            all_rows = []
+            for cn in CROPS:
+                bm = upcoming[cn]["best_month"]
+                rows = kecamatan_summary(grid_clim, cn, bm, oni_val, mapping_kab)
+                for r in rows:
+                    r["Commodity"] = f"{CROPS[cn]['icon']} {t(cn)}"
+                    r["Status"]    = (f"✅ {t('s_rec')}" if r["score"] >= 75 else
+                                      f"⚠️ {t('s_cau')}" if r["score"] >= 50 else
+                                      f"❌ {t('s_not')}")
+                all_rows.extend(rows)
+            df = pd.DataFrame(all_rows)
+            pivot = df.pivot_table(index=["Kabupaten","Kecamatan"],
+                                   columns="Commodity", values="Status",
+                                   aggfunc="first").reset_index()
+            pivot.columns.name = None
+            return pivot.rename(columns={"Kecamatan": t("sub_col")})
+
+        if selected_kab:
+            # ── Specific kabupaten: kecamatan table first, then zoomed map ──
+            st.markdown(
+                f"<div class='section-header'>📋 {t('sub_exp')} — {selected_kab}</div>",
+                unsafe_allow_html=True,
             )
+            with st.spinner(t("spatial_spin")):
+                pivot = _build_kec_pivot()
+            df_filtered = pivot[pivot["Kabupaten"] == selected_kab].drop(
+                columns=["Kabupaten"]).reset_index(drop=True)
+            _render_kec_table(df_filtered)
+
+            st.markdown(
+                f"<div class='section-header'>{t('sec_map')} — {selected_kab}</div>",
+                unsafe_allow_html=True,
+            )
+            st.caption(t("map_caption"))
+            clat, clon, zoom_kab = kabupaten_map_bounds(mapping_kab, selected_kab)
+            map_cols = st.columns(3)
+            for col, crop_name in zip(map_cols, CROPS.keys()):
+                crop   = CROPS[crop_name]
+                best_m = upcoming[crop_name]["best_month"]
+                with col:
+                    st.markdown(
+                        f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
+                        f"color:{crop['color']};margin-bottom:4px'>"
+                        f"{crop['icon']} {t(crop_name)}</div>"
+                        f"<div style='text-align:center;font-size:0.82rem;color:#555;margin-bottom:6px'>"
+                        f"{t('start_in')} {mname(best_m)}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    with st.spinner(f"{t(crop_name)}..."):
+                        fig = make_crop_map(
+                            grid_clim, crop_name, best_m, oni_val,
+                            b_lats, b_lons, g_lats, g_lons, peat_mask,
+                            center_lat=clat, center_lon=clon, zoom=zoom_kab,
+                        )
+                    st.plotly_chart(fig, use_container_width=True)
+            st.caption(_peat_cap)
+
+        else:
+            # ── All Kalteng: context map, 3 province-wide maps, kecamatan in expander ──
+            st.markdown(
+                f"<div class='section-header'>{t('sec_map')}</div>",
+                unsafe_allow_html=True,
+            )
+            st.caption(t("map_caption"))
+            try:
+                st.plotly_chart(make_indonesia_context_map(), use_container_width=True)
+            except Exception:
+                pass
+            map_cols = st.columns(3)
+            for col, crop_name in zip(map_cols, CROPS.keys()):
+                crop   = CROPS[crop_name]
+                best_m = upcoming[crop_name]["best_month"]
+                with col:
+                    st.markdown(
+                        f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
+                        f"color:{crop['color']};margin-bottom:4px'>"
+                        f"{crop['icon']} {t(crop_name)}</div>"
+                        f"<div style='text-align:center;font-size:0.82rem;color:#555;margin-bottom:6px'>"
+                        f"{t('start_in')} {mname(best_m)}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    with st.spinner(f"{t(crop_name)}..."):
+                        fig = make_crop_map(
+                            grid_clim, crop_name, best_m, oni_val,
+                            b_lats, b_lons, g_lats, g_lons, peat_mask,
+                        )
+                    st.plotly_chart(fig, use_container_width=True)
+            st.caption(_peat_cap)
+
+            with st.expander(t("sub_exp")):
+                with st.spinner(t("spatial_spin")):
+                    pivot = _build_kec_pivot()
+                kab_list_exp   = sorted(pivot["Kabupaten"].unique())
+                sel_kab_exp    = st.selectbox(t("sub_sel"), kab_list_exp)
+                df_filtered_exp = pivot[pivot["Kabupaten"] == sel_kab_exp].drop(
+                    columns=["Kabupaten"]).reset_index(drop=True)
+                _render_kec_table(df_filtered_exp)
 
 
 

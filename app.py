@@ -479,6 +479,13 @@ def wrap_month(m):
 # =====================================================================
 # DATA LOADERS
 # =====================================================================
+@st.cache_data(show_spinner=False)
+def load_hindcast_results():
+    try:
+        return pd.read_csv(_BASE / "data" / "hindcast_results.csv")
+    except Exception:
+        return None
+
 @st.cache_data(show_spinner=False, ttl=86400)
 def load_oni(local_path):
     season_to_month = {
@@ -1088,6 +1095,55 @@ def make_kabupaten_rainfall_chart(grid_clim, mapping, kab_name, enso_phase):
     return fig
 
 
+def make_hindcast_chart(df_hc, event_label, crop_name):
+    """Line chart comparing KATAM / Tool / Actual scores for one event × crop."""
+    sub = df_hc[(df_hc["Event"] == event_label) & (df_hc["Crop"] == crop_name)].copy()
+    if sub.empty:
+        return None
+    month_order = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    sub["_ord"] = sub["Start Month"].map({m: i for i, m in enumerate(month_order)})
+    sub = sub.sort_values("_ord")
+    months = sub["Start Month"].tolist()
+
+    enso_color = "#e74c3c" if "Niño" in event_label or "Nino" in event_label else "#2980b9"
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=months, y=sub["KATAM Score"],
+        mode="lines+markers", name="KATAM",
+        line=dict(color="#95a5a6", width=2, dash="dash"),
+        marker=dict(size=7, color="#95a5a6"),
+    ))
+    fig.add_trace(go.Scatter(
+        x=months, y=sub["Tool Score"],
+        mode="lines+markers", name="This Tool",
+        line=dict(color=enso_color, width=2.5),
+        marker=dict(size=8, color=enso_color),
+    ))
+    fig.add_trace(go.Scatter(
+        x=months, y=sub["Actual Score"],
+        mode="lines+markers", name="Actual (CHIRPS)",
+        line=dict(color="#2c3e50", width=2, dash="dot"),
+        marker=dict(size=7, color="#2c3e50"),
+    ))
+    fig.add_hline(y=75, line_dash="dot", line_color="#27ae60", line_width=1,
+                  annotation_text="✅ Recommended (75)", annotation_font_size=9,
+                  annotation_font_color="#27ae60")
+    fig.add_hline(y=50, line_dash="dot", line_color="#f39c12", line_width=1,
+                  annotation_text="⚠️ Caution (50)", annotation_font_size=9,
+                  annotation_font_color="#f39c12", annotation_position="bottom right")
+    fig.update_layout(
+        height=280,
+        margin=dict(l=10, r=10, t=20, b=10),
+        yaxis=dict(range=[0, 100], title="Score", gridcolor="#f0f0f0"),
+        xaxis=dict(showgrid=False),
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.88)",
+                    bordercolor="#eee", borderwidth=1, font=dict(size=11)),
+    )
+    return fig
+
+
 def kabupaten_map_bounds(mapping, kab_name):
     """Return (center_lat, center_lon, zoom) for a kabupaten's grid points."""
     pts = [(float(c.split("_")[0]), float(c.split("_")[1]))
@@ -1468,6 +1524,91 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
 
     if fig_rain:
         st.plotly_chart(fig_rain, use_container_width=True)
+
+    # ── HINDCAST VALIDATION ───────────────────────────────────────
+    sec_val = "📐 Hindcast Validation" if lang == "en" else "📐 Validasi Hindcast"
+    with st.expander(sec_val):
+        df_hc = load_hindcast_results()
+        if df_hc is None:
+            st.info("Validation data not available." if lang == "en" else "Data validasi tidak tersedia.")
+        else:
+            df_hc["Tool_Correct"]  = df_hc["Tool Class"]  == df_hc["Actual Class"]
+            df_hc["KATAM_Correct"] = df_hc["KATAM Class"] == df_hc["Actual Class"]
+            n = len(df_hc)
+            tool_acc  = df_hc["Tool_Correct"].sum()
+            katam_acc = df_hc["KATAM_Correct"].sum()
+
+            # Accuracy metric cards
+            if lang == "en":
+                desc = ("Hindcast accuracy against actual CHIRPS rainfall — "
+                        "El Niño 2015-16 (ONI +2.6) & La Niña 2010-11 (ONI −1.7) · "
+                        f"{n} combinations (3 crops × 12 months × 2 events)")
+            else:
+                desc = ("Akurasi hindcast terhadap curah hujan aktual CHIRPS — "
+                        "El Niño 2015-16 (ONI +2.6) & La Niña 2010-11 (ONI −1.7) · "
+                        f"{n} kombinasi (3 tanaman × 12 bulan × 2 event)")
+            st.caption(desc)
+
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.metric("This Tool" if lang=="en" else "Tool Ini",
+                          f"{tool_acc/n*100:.1f}%",
+                          f"{(tool_acc-katam_acc)/n*100:+.1f} pts vs KATAM")
+            with c2:
+                st.metric("KATAM", f"{katam_acc/n*100:.1f}%")
+            with c3:
+                en_sub = df_hc[df_hc["Event"].str.contains("Ni.o|Nino", regex=True)]
+                st.metric("El Niño" if lang=="en" else "El Niño",
+                          f"{en_sub['Tool_Correct'].mean()*100:.0f}%",
+                          f"KATAM {en_sub['KATAM_Correct'].mean()*100:.0f}%")
+            with c4:
+                la_sub = df_hc[df_hc["Event"].str.contains("La")]
+                st.metric("La Niña",
+                          f"{la_sub['Tool_Correct'].mean()*100:.0f}%",
+                          f"KATAM {la_sub['KATAM_Correct'].mean()*100:.0f}%")
+
+            # Charts: Rice comparison per event
+            events    = df_hc["Event"].unique().tolist()
+            crop_opts = df_hc["Crop"].unique().tolist()
+            sel_crop  = st.selectbox(
+                "Crop:" if lang == "en" else "Tanaman:",
+                crop_opts, key="val_crop_sel"
+            )
+
+            chart_cols = st.columns(len(events))
+            for col, ev in zip(chart_cols, events):
+                with col:
+                    st.markdown(
+                        f"<div style='text-align:center;font-weight:600;font-size:0.9rem;"
+                        f"color:#{'e74c3c' if 'Ni' in ev and 'La' not in ev else '2980b9'};"
+                        f"margin-bottom:4px'>{ev}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    fig_v = make_hindcast_chart(df_hc, ev, sel_crop)
+                    if fig_v:
+                        st.plotly_chart(fig_v, use_container_width=True)
+
+            # Accuracy by crop table
+            acc_label = "Accuracy by Crop" if lang == "en" else "Akurasi per Tanaman"
+            st.markdown(f"**{acc_label}**")
+            acc_rows = []
+            for crop in crop_opts:
+                sub = df_hc[df_hc["Crop"] == crop]
+                acc_rows.append({
+                    "Crop" if lang=="en" else "Tanaman": crop,
+                    "Tool": f"{sub['Tool_Correct'].mean()*100:.0f}%",
+                    "KATAM": f"{sub['KATAM_Correct'].mean()*100:.0f}%",
+                    "Gap": f"+{(sub['Tool_Correct'].mean()-sub['KATAM_Correct'].mean())*100:.0f} pts",
+                })
+            st.dataframe(pd.DataFrame(acc_rows), use_container_width=True, hide_index=True)
+
+            st.caption(
+                "Method: WMO Guide 168 (2018) · Scoring: ENSO_SCORE_DELTA (mild/strong) · "
+                "Production data: BPS Kalimantan Tengah"
+                if lang == "en" else
+                "Metode: WMO Guide 168 (2018) · Scoring: ENSO_SCORE_DELTA (lemah/kuat) · "
+                "Data produksi: BPS Kalimantan Tengah"
+            )
 
 
 

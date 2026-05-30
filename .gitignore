@@ -22,8 +22,9 @@ screenshots/
 *.docx
 *.pdf
 *.csv
-hindcast_results.csv
 hindcast_divergence.csv
+# hindcast_results.csv is needed by the app — allow it
+!data/hindcast_results.csv
 
 # Screenshot
 Screenshot*.png

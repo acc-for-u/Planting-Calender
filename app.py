@@ -1110,9 +1110,11 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         else:
             harvest_line = ""
 
+        score_lbl = f"📊 Score: **{s}/100**"
         msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
                f"{prob_lbl}  \n"
-               f"{water_lbl}"
+               f"{water_lbl}  \n"
+               f"{score_lbl}"
                f"{harvest_line}")
         with col:
             if s >= 75:

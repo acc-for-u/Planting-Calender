@@ -214,6 +214,9 @@ T = {
                        "**{icon} Cassava** — drought tolerant and best suited during El Niño."),
         "tip_lanina": "💡 **La Niña conditions favour Rice.** Best start month: **{month}**.",
         "tip_normal": "💡 **Best crop to plant in the next 3 months:** {icon} **{crop}** — start in **{month}**",
+        "tip_none": ("⛔ **Conditions not favourable for any crop in the next 3 months.** "
+                     "Rainfall is too low for reliable planting. "
+                     "Consider waiting until conditions improve, or prepare supplemental irrigation."),
         "rec_header_El Niño": "🔴 **El Niño is active.** Expect drier conditions, especially Jun–Sep.",
         "rec_header_La Niña": "🔵 **La Niña is active.** Expect more rainfall than usual.",
         "rec_header_Neutral": "🟢 **Normal conditions.** Follow the standard planting calendar above.",
@@ -328,6 +331,9 @@ T = {
                        "**{icon} Singkong** — tahan kekeringan dan paling cocok saat El Niño."),
         "tip_lanina": "💡 **Kondisi La Niña menguntungkan Padi.** Bulan tanam terbaik: **{month}**.",
         "tip_normal": "💡 **Tanaman terbaik 3 bulan ke depan:** {icon} **{crop}** — mulai tanam **{month}**",
+        "tip_none": ("⛔ **Kondisi tidak mendukung untuk semua komoditas dalam 3 bulan ke depan.** "
+                     "Curah hujan terlalu rendah untuk tanam yang andal. "
+                     "Pertimbangkan menunggu hingga kondisi membaik, atau siapkan irigasi tambahan."),
         "rec_header_El Niño": "🔴 **El Niño aktif.** Perkirakan kondisi lebih kering, terutama Jun–Sep.",
         "rec_header_La Niña": "🔵 **La Niña aktif.** Perkirakan curah hujan lebih tinggi dari biasanya.",
         "rec_header_Neutral": "🟢 **Kondisi normal.** Ikuti kalender tanam standar di atas.",
@@ -1297,8 +1303,13 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                 st.error(f"**{t('farmer_stop')}**\n\n" + msg)
 
     # ── SUBSTITUTION TIP ─────────────────────────────────────────
-    best_crop = max(upcoming, key=lambda c: upcoming[c]["score"])
-    if enso_phase == "El Niño" and upcoming["Rice"]["score"] < 50:
+    best_crop  = max(upcoming, key=lambda c: upcoming[c]["score"])
+    best_score = upcoming[best_crop]["score"]
+    all_bad    = all(upcoming[c]["score"] < 50 for c in CROPS)
+
+    if all_bad:
+        st.error(t("tip_none"))
+    elif enso_phase == "El Niño" and upcoming["Rice"]["score"] < 50:
         st.info(t("tip_elnino").format(icon=CROPS["Cassava"]["icon"]))
     elif enso_phase == "La Niña" and upcoming["Rice"]["score"] >= 70:
         st.info(t("tip_lanina").format(month=upcoming["Rice"]["best_month_name"]))

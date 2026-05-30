@@ -701,6 +701,22 @@ def load_kabupaten_boundaries(shp_path):
     return all_lats, all_lons, all_names
 
 @st.cache_data(show_spinner=False)
+def load_kecamatan_boundaries(shp_path, kabupaten_name):
+    """Load kecamatan boundary coordinates for a specific kabupaten."""
+    gdf = gpd.read_file(shp_path)
+    subset = gdf[(gdf["NAME_1"] == "Kalimantan Tengah") &
+                 (gdf["NAME_2"] == kabupaten_name)].copy()
+    all_lats, all_lons = [], []
+    for _, row in subset.iterrows():
+        geom  = row.geometry
+        polys = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
+        for poly in polys:
+            coords = list(poly.exterior.coords)
+            all_lats.extend([c[1] for c in coords] + [None])
+            all_lons.extend([c[0] for c in coords] + [None])
+    return all_lats, all_lons
+
+@st.cache_data(show_spinner=False)
 def load_peatland_overlay(shp_path):
     """Load peatland (gambut) polygon coordinates for Plotly overlay.
     Source: WRI Indonesia peatland shapefile (2012), clipped to Kalteng.
@@ -847,7 +863,8 @@ def score_grid_points_vec(grid_clim, crop_name, start_month, oni_val):
 
 def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
                   g_lats=None, g_lons=None, peat_mask=None,
-                  center_lat=-1.5, center_lon=113.5, zoom=4.5):
+                  center_lat=-1.5, center_lon=113.5, zoom=4.5,
+                  kec_lats=None, kec_lons=None):
     """Map showing suitability score for one crop across all grid points.
     peat_mask: boolean array (True = peatland) — those points shown as 'Not Assessed'.
     """
@@ -898,6 +915,14 @@ def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
             mode="lines",
             line=dict(color="#8b5a2b", width=1.5),
             name="🟤 Peatland boundary",
+            hoverinfo="skip", showlegend=False,
+        ))
+
+    if kec_lats:
+        fig.add_trace(go.Scattermapbox(
+            lat=kec_lats, lon=kec_lons,
+            mode="lines",
+            line=dict(color="#555555", width=0.6),
             hoverinfo="skip", showlegend=False,
         ))
 
@@ -1189,6 +1214,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             )
             st.caption(t("map_caption"))
             clat, clon, zoom_kab = kabupaten_map_bounds(mapping_kab, selected_kab)
+            kec_lats, kec_lons   = load_kecamatan_boundaries(DEFAULT_KEC_PATH, selected_kab)
             map_cols = st.columns(3)
             for col, crop_name in zip(map_cols, CROPS.keys()):
                 crop   = CROPS[crop_name]
@@ -1207,6 +1233,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
                             grid_clim, crop_name, best_m, oni_val,
                             b_lats, b_lons, g_lats, g_lons, peat_mask,
                             center_lat=clat, center_lon=clon, zoom=zoom_kab,
+                            kec_lats=kec_lats, kec_lons=kec_lons,
                         )
                     st.plotly_chart(fig, use_container_width=True)
             st.caption(_peat_cap)

@@ -68,6 +68,16 @@ ENSO_THRESH = {"elnino": 0.5, "lanina": -0.5}
 SENS_SCORE  = {"low": 2, "medium": 5, "high": 8, "very_high": 10}
 TOL_SCORE   = {"low": 2, "medium": 5, "high": 9}
 
+# ENSO scoring delta — differentiated by magnitude and Ky (FAO-33)
+# Strong La Niña bonus is smaller than Mild due to waterlogging/root rot risk
+ENSO_SCORE_DELTA = {
+    "Strong El Niño": {"low": -5,  "medium": -8,  "high": -12, "very_high": -20},
+    "Mild El Niño":   {"low": -3,  "medium": -5,  "high":  -8, "very_high": -10},
+    "Neutral":        {"low":  0,  "medium":  0,  "high":   0, "very_high":   0},
+    "Mild La Niña":   {"low":  1,  "medium":  2,  "high":   3, "very_high":   5},
+    "Strong La Niña": {"low":  0,  "medium":  1,  "high":   1, "very_high":   3},
+}
+
 ENSO_FACTORS = {
     1:  {"El Niño": 0.976, "La Niña": 0.907, "Neutral": 1.0},
     2:  {"El Niño": 1.174, "La Niña": 1.065, "Neutral": 1.0},
@@ -162,20 +172,23 @@ CROP_NOTES = {
 }
 
 ENSO_OPTIONS = {
-    "🟢  Normal":                                      ("Neutral",  0.0),
-    "🟡  Mild El Niño  (slightly drier than usual)":  ("El Niño",  1.2),
-    "🔴  Strong El Niño  (drought risk)":             ("El Niño",  1.8),
-    "🔵  La Niña  (wetter than usual)":               ("La Niña", -1.2),
+    "🟢  Normal":                                           ("Neutral",       0.0),
+    "🟡  Mild El Niño  (slightly drier than usual)":       ("Mild El Niño",  1.2),
+    "🔴  Strong El Niño  (drought risk)":                  ("Strong El Niño", 1.8),
+    "🔵  Mild La Niña  (wetter than usual)":               ("Mild La Niña",  -1.2),
+    "🌊  Strong La Niña  (heavy rain risk)":               ("Strong La Niña", -1.8),
 }
 
 ENSO_KEY_MAP = {
-    "🟢  Normal":                                     "🟢  Normal",
-    "🟡  Mild El Niño  (slightly drier than usual)":  "🟡  Mild El Niño  (slightly drier than usual)",
-    "🔴  Strong El Niño  (drought risk)":             "🔴  Strong El Niño  (drought risk)",
-    "🔵  La Niña  (wetter than usual)":               "🔵  La Niña  (wetter than usual)",
-    "🟡  El Niño Lemah  (sedikit lebih kering)":      "🟡  Mild El Niño  (slightly drier than usual)",
-    "🔴  El Niño Kuat  (risiko kekeringan)":          "🔴  Strong El Niño  (drought risk)",
-    "🔵  La Niña  (lebih basah dari biasanya)":       "🔵  La Niña  (wetter than usual)",
+    "🟢  Normal":                                           "🟢  Normal",
+    "🟡  Mild El Niño  (slightly drier than usual)":       "🟡  Mild El Niño  (slightly drier than usual)",
+    "🔴  Strong El Niño  (drought risk)":                  "🔴  Strong El Niño  (drought risk)",
+    "🔵  Mild La Niña  (wetter than usual)":               "🔵  Mild La Niña  (wetter than usual)",
+    "🌊  Strong La Niña  (heavy rain risk)":               "🌊  Strong La Niña  (heavy rain risk)",
+    "🟡  El Niño Lemah  (sedikit lebih kering)":           "🟡  Mild El Niño  (slightly drier than usual)",
+    "🔴  El Niño Kuat  (risiko kekeringan)":               "🔴  Strong El Niño  (drought risk)",
+    "🔵  La Niña Lemah  (lebih basah dari biasanya)":      "🔵  Mild La Niña  (wetter than usual)",
+    "🌊  La Niña Kuat  (risiko hujan lebat)":              "🌊  Strong La Niña  (heavy rain risk)",
 }
 
 T = {
@@ -194,7 +207,8 @@ T = {
         "enso_opts": ["🟢  Normal",
                       "🟡  Mild El Niño  (slightly drier than usual)",
                       "🔴  Strong El Niño  (drought risk)",
-                      "🔵  La Niña  (wetter than usual)"],
+                      "🔵  Mild La Niña  (wetter than usual)",
+                      "🌊  Strong La Niña  (heavy rain risk)"],
         "sec_plant": "🗓️ Best Time to Plant — Next 3 Months",
         "sec_rec": "📋 General Recommendations",
         "sec_map": "🗺️ Best Crop per Area — Central Kalimantan",
@@ -311,7 +325,8 @@ T = {
         "enso_opts": ["🟢  Normal",
                       "🟡  El Niño Lemah  (sedikit lebih kering)",
                       "🔴  El Niño Kuat  (risiko kekeringan)",
-                      "🔵  La Niña  (lebih basah dari biasanya)"],
+                      "🔵  La Niña Lemah  (lebih basah dari biasanya)",
+                      "🌊  La Niña Kuat  (risiko hujan lebat)"],
         "sec_plant": "🗓️ Waktu Tanam Terbaik — 3 Bulan ke Depan",
         "sec_rec": "📋 Rekomendasi Umum",
         "sec_map": "🗺️ Komoditas Terbaik per Wilayah — Kalimantan Tengah",
@@ -456,6 +471,13 @@ def classify_enso(v):
     if v <= ENSO_THRESH["lanina"]: return "La Niña"
     return "Neutral"
 
+def classify_enso_detailed(v):
+    if v >= 1.5:   return "Strong El Niño"
+    if v >= 0.5:   return "Mild El Niño"
+    if v <= -1.5:  return "Strong La Niña"
+    if v <= -0.5:  return "Mild La Niña"
+    return "Neutral"
+
 def wrap_month(m):
     return ((m - 1) % 12) + 1
 
@@ -557,12 +579,9 @@ def planting_score(clim, crop_name, start_month, oni_val):
     if total_deficit < -200:   score -= 15
     elif total_deficit < -100: score -= 8
 
-    # ENSO sensitivity penalty/bonus — proportional to Ky (FAO-33):
-    # Rice Ky≈1.09 (very_high), Oil Palm Ky≈0.80 (high), Cassava Ky≈0.65 (low)
-    if enso == "El Niño":
-        score -= {"low": 5, "medium": 8, "high": 12, "very_high": 20}[crop["enso_sens"]]
-    elif enso == "La Niña":
-        score += {"low": 1, "medium": 2, "high": 3, "very_high": 5}[crop["enso_sens"]]
+    # ENSO penalty/bonus — differentiated by magnitude, proportional to Ky (FAO-33)
+    enso_detailed = classify_enso_detailed(oni_val)
+    score += ENSO_SCORE_DELTA[enso_detailed][crop["enso_sens"]]
 
     score = max(0, min(100, score))
 
@@ -574,7 +593,7 @@ def planting_score(clim, crop_name, start_month, oni_val):
     return {
         "score": score, "status": status, "color": color,
         "n_deficit": int(n_deficit), "total_deficit": float(total_deficit),
-        "enso": enso, "wb": wb,
+        "enso": enso_detailed, "wb": wb,
     }
 
 # =====================================================================
@@ -820,10 +839,8 @@ def score_grid_points_vec(grid_clim, crop_name, start_month, oni_val):
     if start_month in crop["optimal_start"]:
         scores += 5
 
-    if enso == "El Niño":
-        scores -= {"low":5,"medium":8,"high":12,"very_high":20}[crop["enso_sens"]]
-    elif enso == "La Niña":
-        scores += {"low":1,"medium":2,"high":3,"very_high":5}[crop["enso_sens"]]
+    enso_detailed = classify_enso_detailed(oni_val)
+    scores += ENSO_SCORE_DELTA[enso_detailed][crop["enso_sens"]]
 
     scores = np.clip(scores, 0, 100)
 
@@ -1405,7 +1422,7 @@ def main():
     if latest_phase == "El Niño":
         enso_key = "🔴  Strong El Niño  (drought risk)" if latest_oni >= 1.5 else "🟡  Mild El Niño  (slightly drier than usual)"
     elif latest_phase == "La Niña":
-        enso_key = "🔵  La Niña  (wetter than usual)"
+        enso_key = "🌊  Strong La Niña  (heavy rain risk)" if latest_oni <= -1.5 else "🔵  Mild La Niña  (wetter than usual)"
     else:
         enso_key = "🟢  Normal"
 
@@ -1481,7 +1498,7 @@ def main():
             display_opts = t("enso_opts")
             auto_idx = next(
                 (i for i, opt in enumerate(display_opts)
-                 if ENSO_OPTIONS.get(ENSO_KEY_MAP.get(opt, opt), (None,))[0] == latest_phase),
+                 if ENSO_KEY_MAP.get(opt, opt) == enso_key),
                 0,
             )
             sim_display = st.selectbox(t("override"), display_opts, index=auto_idx)

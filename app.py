@@ -1105,16 +1105,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             else:
                 st.error(f"**{t('farmer_stop')}**\n\n" + msg)
 
-    # ── LIMIT STATE WARNINGS (tetap di tampilan utama) ───────────
-    st.markdown(" ")
-    for crop_name in CROPS:
-        best_m   = upcoming[crop_name]["best_month"]
-        adj_rain = clim.loc[best_m, "mean"] * ENSO_FACTORS[best_m][enso_phase]
-        if adj_rain > 300:
-            st.warning(f"**{t(crop_name)} — {mname(best_m)}:** " + t("warn_flood"))
-        elif adj_rain < 100:
-            st.error(f"**{t(crop_name)} — {mname(best_m)}:** " + t("warn_drought"))
-
     # ── SUBSTITUTION TIP ─────────────────────────────────────────
     best_crop = max(upcoming, key=lambda c: upcoming[c]["score"])
     if enso_phase == "El Niño" and upcoming["Rice"]["score"] < 50:

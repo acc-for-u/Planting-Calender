@@ -1,6 +1,6 @@
 """
 Agricultural Planting Calendar Advisor
-Central Kalimantan, Indonesia — CHIRPS 1991–2020 + ENSO (ONI)
+Central Kalimantan, Indonesia — BMKG Blending 1991–2020 + ENSO (ONI)
 """
 
 import streamlit as st
@@ -187,7 +187,7 @@ T = {
         "lang_label": "🌐 Language",
         "hero_region": "🌏 Central Kalimantan · Indonesia",
         "hero_title": "Agricultural Planting Calendar", "hero_sub": "Advisor",
-        "chip1": "📊 CHIRPS 1991–2020", "chip2": "🌊 ENSO / ONI Integration",
+        "chip1": "📊 BMKG Blending 1991–2020", "chip2": "🌊 ENSO / ONI Integration",
         "chip3": "🗺️ Spatial Analysis", "chip4": "🌾 Rice · Oil Palm · Cassava",
         "banner_Neutral": "Normal Conditions", "banner_El Niño": "El Niño Active",
         "banner_La Niña": "La Niña Active",
@@ -304,7 +304,7 @@ T = {
         "lang_label": "🌐 Bahasa",
         "hero_region": "🌏 Kalimantan Tengah · Indonesia",
         "hero_title": "Kalender Tanam Pertanian", "hero_sub": "Berbasis ENSO",
-        "chip1": "📊 CHIRPS 1991–2020", "chip2": "🌊 Integrasi ENSO / ONI",
+        "chip1": "📊 BMKG Blending 1991–2020", "chip2": "🌊 Integrasi ENSO / ONI",
         "chip3": "🗺️ Analisis Spasial", "chip4": "🌾 Padi · Sawit · Singkong",
         "banner_Neutral": "Kondisi Normal", "banner_El Niño": "El Niño Aktif",
         "banner_La Niña": "La Niña Aktif",

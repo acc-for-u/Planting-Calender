@@ -479,7 +479,6 @@ def wrap_month(m):
 # =====================================================================
 # DATA LOADERS
 # =====================================================================
-@st.cache_data(show_spinner=False)
 @st.cache_data(show_spinner=False, ttl=86400)
 def load_oni(local_path):
     season_to_month = {
@@ -603,7 +602,7 @@ def make_indonesia_context_map():
     kalteng_lats, kalteng_lons = [], []
 
     for _, row in gdf.iterrows():
-        is_kalteng = row["NAME_1"] == "KalimantanTengah"
+        is_kalteng = row["NAME_1"] == "Kalimantan Tengah"
         geom  = row.geometry
         polys = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
         for poly in polys:
@@ -1452,6 +1451,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
         f"<tbody>{rows_html}</tbody></table>"
     )
     st.markdown(table_html, unsafe_allow_html=True)
+    st.caption(t("forecast_on") if forecast_rain else t("forecast_off"))
 
     # ── RAINFALL CHART ────────────────────────────────────────────
     rain_area = selected_kab if selected_kab else ("Kalimantan Tengah" if lang == "en" else "Kalimantan Tengah")

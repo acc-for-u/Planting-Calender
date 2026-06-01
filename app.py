@@ -305,6 +305,15 @@ T = {
                           "and users with a technical background."),
         "chart_exp": "📈 Rainfall Chart & Climate Uncertainty",
         "map_exp_label": "🗺️ Suitability Maps by Area",
+        "tab_calendar": "🌾 Planting Calendar",
+        "tab_weather":  "🌤️ Current Weather",
+        "weather_title": "3-Day Weather Forecast — Palangka Raya",
+        "weather_src":  "Source: BMKG (Indonesian Agency for Meteorology, Climatology and Geophysics)",
+        "weather_temp": "Temperature", "weather_hum": "Humidity",
+        "weather_wind": "Wind", "weather_rain": "Rainfall",
+        "weather_today": "Today", "weather_tomorrow": "Tomorrow",
+        "weather_error": "⚠️ BMKG weather data unavailable. Please try again later.",
+        "weather_max": "Max", "weather_min": "Min",
     },
     "id": {
         "brand": "Kalender Tanam", "region": "KALIMANTAN TENGAH",
@@ -422,6 +431,15 @@ T = {
                           "dan pengguna dengan latar belakang teknis."),
         "chart_exp": "📈 Grafik Curah Hujan & Ketidakpastian Iklim",
         "map_exp_label": "🗺️ Peta Kesesuaian per Wilayah",
+        "tab_calendar": "🌾 Kalender Tanam",
+        "tab_weather":  "🌤️ Cuaca Terkini",
+        "weather_title": "Prakiraan Cuaca 3 Hari — Palangka Raya",
+        "weather_src":  "Sumber: BMKG (Badan Meteorologi, Klimatologi dan Geofisika)",
+        "weather_temp": "Suhu", "weather_hum": "Kelembapan",
+        "weather_wind": "Angin", "weather_rain": "Curah Hujan",
+        "weather_today": "Hari Ini", "weather_tomorrow": "Besok",
+        "weather_error": "⚠️ Data cuaca BMKG tidak tersedia. Coba lagi nanti.",
+        "weather_max": "Maks", "weather_min": "Min",
     },
 }
 
@@ -430,6 +448,44 @@ def t(key):
 
 def mname(m):
     return t("months")[m - 1]
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def fetch_bmkg_weather():
+    """Fetch 3-day weather forecast from BMKG for Palangka Raya (adm4=62.71.01.1001)."""
+    try:
+        resp = requests.get(
+            "https://api.bmkg.go.id/publik/prakiraan-cuaca",
+            params={"adm4": "62.71.01.1001"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        raw_days = resp.json()["data"][0]["cuaca"]
+        days = []
+        for slots in raw_days:
+            if not slots:
+                continue
+            date_str = slots[0]["local_datetime"][:10]
+            temps  = [s["t"]  for s in slots]
+            hums   = [s["hu"] for s in slots]
+            rains  = [s["tp"] for s in slots]
+            winds  = [s["ws"] for s in slots]
+            # pick midday slot (12:00 local) or first slot for dominant condition
+            mid = next((s for s in slots if "12:00" in s["local_datetime"]), slots[len(slots)//2])
+            days.append({
+                "date":        date_str,
+                "temp_max":    max(temps),
+                "temp_min":    min(temps),
+                "humidity":    round(sum(hums) / len(hums)),
+                "rain_total":  round(sum(rains), 1),
+                "wind_avg":    round(sum(winds) / len(winds), 1),
+                "desc_id":     mid["weather_desc"],
+                "desc_en":     mid["weather_desc_en"],
+                "icon_url":    mid["image"],
+                "slots":       slots,
+            })
+        return days if days else None
+    except Exception:
+        return None
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_openmeteo_forecast():
@@ -1474,6 +1530,98 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
 
 
 # =====================================================================
+# WEATHER PAGE
+# =====================================================================
+def page_weather():
+    lang = st.session_state.get("lang", "en")
+    st.markdown(
+        f"<div class='section-header'>{t('weather_title')}</div>",
+        unsafe_allow_html=True,
+    )
+
+    days = fetch_bmkg_weather()
+    if not days:
+        st.error(t("weather_error"))
+        return
+
+    import datetime as _dt
+    today = _dt.date.today()
+
+    cols = st.columns(len(days))
+    for col, day in zip(cols, days):
+        d = _dt.date.fromisoformat(day["date"])
+        if d == today:
+            day_label = f"**{t('weather_today')}**"
+        elif d == today + _dt.timedelta(days=1):
+            day_label = f"**{t('weather_tomorrow')}**"
+        else:
+            day_label = f"**{d.strftime('%A')}**" if lang == "en" else f"**{['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'][d.weekday()]}**"
+
+        desc = day["desc_en"] if lang == "en" else day["desc_id"]
+
+        with col:
+            st.markdown(
+                f"<div style='background:white;border-radius:16px;padding:20px;text-align:center;"
+                f"box-shadow:0 4px 16px rgba(0,0,0,0.07);height:100%'>"
+                f"<div style='font-size:0.85rem;color:#888;margin-bottom:4px'>{d.strftime('%d %b %Y')}</div>"
+                f"<div style='font-size:1rem;font-weight:700;color:#2c3e50;margin-bottom:10px'>{day_label}</div>"
+                f"<img src='{day['icon_url']}' width='64' style='margin-bottom:8px' "
+                f"onerror=\"this.style.display='none'\">"
+                f"<div style='font-size:0.9rem;color:#555;margin-bottom:12px'>{desc}</div>"
+                f"<div style='display:flex;justify-content:center;gap:16px;margin-bottom:10px'>"
+                f"<div><div style='font-size:1.4rem;font-weight:700;color:#e74c3c'>{day['temp_max']}°</div>"
+                f"<div style='font-size:0.72rem;color:#aaa'>{t('weather_max')}</div></div>"
+                f"<div><div style='font-size:1.4rem;font-weight:700;color:#3498db'>{day['temp_min']}°</div>"
+                f"<div style='font-size:0.72rem;color:#aaa'>{t('weather_min')}</div></div>"
+                f"</div>"
+                f"<div style='font-size:0.82rem;color:#666;line-height:1.8'>"
+                f"💧 {t('weather_hum')}: <b>{day['humidity']}%</b><br>"
+                f"🌧️ {t('weather_rain')}: <b>{day['rain_total']} mm</b><br>"
+                f"💨 {t('weather_wind')}: <b>{day['wind_avg']} m/s</b>"
+                f"</div></div>",
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Hourly detail for today
+    today_data = days[0]
+    st.markdown(
+        f"<div class='section-header'>🕐 {'Hourly Detail — Today' if lang == 'en' else 'Detail Per Jam — Hari Ini'}</div>",
+        unsafe_allow_html=True,
+    )
+    slots = today_data["slots"]
+    times  = [s["local_datetime"][11:16] for s in slots]
+    temps  = [s["t"]  for s in slots]
+    rains  = [s["tp"] for s in slots]
+    hums   = [s["hu"] for s in slots]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=times, y=rains, name=t("weather_rain"),
+        marker_color="#3498db", opacity=0.7, yaxis="y2",
+    ))
+    fig.add_trace(go.Scatter(
+        x=times, y=temps, mode="lines+markers",
+        line=dict(color="#e74c3c", width=2.5),
+        marker=dict(size=7), name=f"{t('weather_temp')} (°C)",
+    ))
+    fig.update_layout(
+        height=280,
+        margin=dict(l=10, r=10, t=10, b=10),
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.88)",
+                    bordercolor="#eee", borderwidth=1, font=dict(size=11)),
+        yaxis=dict(title="°C", gridcolor="#f0f0f0", zeroline=False),
+        yaxis2=dict(title="mm", overlaying="y", side="right",
+                    showgrid=False, zeroline=False),
+        xaxis=dict(showgrid=False),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption(t("weather_src"))
+
+
+# =====================================================================
 # MAIN
 # =====================================================================
 def main():
@@ -1661,7 +1809,11 @@ def main():
                 latest_phase = sim_phase
                 st.info(t("sim_warning"))
 
-    page_farmer(clim, latest_phase, oni_val, grid_clim)
+    tab1, tab2 = st.tabs([t("tab_calendar"), t("tab_weather")])
+    with tab1:
+        page_farmer(clim, latest_phase, oni_val, grid_clim)
+    with tab2:
+        page_weather()
 
 
 if __name__ == "__main__":

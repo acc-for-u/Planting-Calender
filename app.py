@@ -676,7 +676,7 @@ def make_indonesia_context_map():
     kalteng_lats, kalteng_lons = [], []
 
     for _, row in gdf.iterrows():
-        is_kalteng = row["NAME_1"] == "Kalimantan Tengah"
+        is_kalteng = row["NAME_1"] == "KalimantanTengah"
         geom  = row.geometry
         polys = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
         for poly in polys:
@@ -1190,7 +1190,7 @@ def get_kabupaten_clim(grid_clim, mapping, kab_name):
 # =====================================================================
 # FARMER MODE
 # =====================================================================
-def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
+def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, latest_date=None):
     current_month = datetime.datetime.now().month
     lang = st.session_state.get("lang", "en")
 
@@ -1202,46 +1202,58 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
             clim.loc[m, "mean"] = rain
     clim_kalteng = clim  # save all-Kalteng clim before possible kabupaten override
 
-    # ── Climate banner ────────────────────────────────────────────
-    banner_cfg = {
-        "Neutral": ("🟢", "#d5f5e3", "#1a6b3c", "#27ae60"),
-        "El Niño": ("🔴", "#fff5f5", "#922b21", "#e74c3c"),
-        "La Niña": ("🔵", "#f0f7ff", "#1a5276", "#2980b9"),
-    }
-    icon, bg, fg, border = banner_cfg[enso_phase]
-    label = t(f"banner_{enso_phase}")
-    st.markdown(
-        f"<div style='background:{bg};border-radius:14px;padding:18px 28px;"
-        f"margin-bottom:24px;border-left:5px solid {border};"
-        f"box-shadow:0 4px 16px rgba(0,0,0,0.06);display:flex;align-items:center;gap:18px'>"
-        f"<div style='font-size:2.8rem;line-height:1'>{icon}</div>"
-        f"<div>"
-        f"<div style='font-size:1.3rem;font-weight:700;color:{fg};margin-bottom:2px'>{label}</div>"
-        f"</div></div>",
-        unsafe_allow_html=True,
-    )
+    # ── ENSO card (left) | Kabupaten selector (right) ────────────
+    col_enso, col_kab = st.columns([1, 3], gap="medium")
 
-    st.caption("📊 Indonesian Agency for Meteorology, Climatology and Geophysics · NOAA ONI")
+    with col_enso:
+        _badge  = {"El Niño": "🔴", "La Niña": "🔵", "Neutral": "🟢"}[enso_phase]
+        _accent = {"El Niño": "#e74c3c", "La Niña": "#2980b9", "Neutral": "#27ae60"}[enso_phase]
+        _date_html = (f"<div style='font-size:0.68rem;color:#aaa;margin-top:6px'>{latest_date}</div>"
+                      if latest_date else "")
+        st.markdown(
+            f"<div style='background:#1a2f1a;border-radius:12px;padding:16px 10px;"
+            f"text-align:center;border:1px solid rgba(255,255,255,0.12);margin-bottom:10px'>"
+            f"<div style='font-size:2rem;margin-bottom:6px'>{_badge}</div>"
+            f"<div style='font-weight:700;color:white;font-size:0.88rem;margin-bottom:8px'>"
+            f"{t(f'banner_{enso_phase}')}</div>"
+            f"<div style='background:{_accent}22;border-radius:6px;padding:3px 8px;"
+            f"display:inline-block'>"
+            f"<span style='color:{_accent};font-weight:700;font-size:0.82rem'>"
+            f"ONI {latest_oni:+.2f}</span></div>"
+            f"{_date_html}</div>",
+            unsafe_allow_html=True,
+        )
+        with st.expander(t("simulate")):
+            _opts = t("enso_opts")
+            _p2s  = {"El Niño": "🔴  El Niño", "La Niña": "🔵  La Niña", "Neutral": "🟢  Normal"}
+            _idx  = next((i for i, o in enumerate(_opts)
+                          if o == _p2s.get(enso_phase, "🟢  Normal")), 0)
+            _sim  = st.selectbox(t("override"), _opts, index=_idx, key="sim_sel_main")
+            _sp   = {"🔴  El Niño": "El Niño", "🔵  La Niña": "La Niña", "🟢  Normal": "Neutral"}[_sim]
+            if _sp != enso_phase:
+                _, oni_val = ENSO_OPTIONS[_sim]
+                enso_phase = _sp
+                st.info(t("sim_warning"))
 
-    # ── KABUPATEN SELECTOR ────────────────────────────────────────
-    selected_kab = None
-    mapping_kab  = None
-    if grid_clim is not None:
-        mapping_kab  = load_kecamatan_mapping(tuple(grid_clim.columns.tolist()))
-        kab_list     = sorted({kab for kab, _ in mapping_kab.values() if kab is not None})
-        all_lbl      = "🌏 All of Central Kalimantan" if lang == "en" else "🌏 Seluruh Kalimantan Tengah"
-        sel_label    = "📍 Select your area:" if lang == "en" else "📍 Pilih wilayah Anda:"
-        selected_kab = st.selectbox(sel_label, [all_lbl] + kab_list, key="kab_main_sel")
+    with col_kab:
+        selected_kab = None
+        mapping_kab  = None
+        if grid_clim is not None:
+            mapping_kab  = load_kecamatan_mapping(tuple(grid_clim.columns.tolist()))
+            kab_list     = sorted({kab for kab, _ in mapping_kab.values() if kab is not None})
+            all_lbl      = "🌏 All of Central Kalimantan" if lang == "en" else "🌏 Seluruh Kalimantan Tengah"
+            sel_label    = "📍 Select your area:" if lang == "en" else "📍 Pilih wilayah Anda:"
+            selected_kab = st.selectbox(sel_label, [all_lbl] + kab_list, key="kab_main_sel")
 
-        if selected_kab != all_lbl:
-            kab_clim = get_kabupaten_clim(grid_clim, mapping_kab, selected_kab)
-            if kab_clim is not None:
-                if forecast_rain:
-                    for m, rain in forecast_rain.items():
-                        kab_clim.loc[m, "mean"] = rain
-                clim = kab_clim
-        else:
-            selected_kab = None  # treat None as "all Kalteng"
+            if selected_kab != all_lbl:
+                kab_clim = get_kabupaten_clim(grid_clim, mapping_kab, selected_kab)
+                if kab_clim is not None:
+                    if forecast_rain:
+                        for m, rain in forecast_rain.items():
+                            kab_clim.loc[m, "mean"] = rain
+                    clim = kab_clim
+            else:
+                selected_kab = None
 
     # ── Compute scores ───────────────────────────────────────────
     next_3 = [wrap_month(current_month + i) for i in range(3)]
@@ -1742,55 +1754,11 @@ def main():
             unsafe_allow_html=True,
         )
 
-        # ── ENSO card ─────────────────────────────────────────────
-        st.markdown(
-            f"<div style='font-size:0.68rem;color:rgba(255,255,255,0.45);letter-spacing:2px;"
-            f"text-transform:uppercase;margin-bottom:10px'>{t('live_climate')}</div>",
-            unsafe_allow_html=True,
-        )
-        accent = enso_accent[latest_phase]
-        st.markdown(
-            f"<div style='background:rgba(0,0,0,0.28);border-radius:14px;padding:22px 16px;"
-            f"text-align:center;border:1px solid rgba(255,255,255,0.1);margin-bottom:6px'>"
-            f"<div style='font-size:3rem;margin-bottom:8px'>{badge}</div>"
-            f"<div style='font-weight:700;color:white;font-size:1.2rem;margin-bottom:6px'>"
-            f"{t(f'banner_{latest_phase}')}</div>"
-            f"<div style='background:{accent}22;border-radius:8px;padding:6px 10px;display:inline-block'>"
-            f"<span style='color:{accent};font-weight:700;font-size:0.9rem'>ONI {latest_oni:+.2f}</span>"
-            f"</div></div>",
-            unsafe_allow_html=True,
-        )
-        if latest_date:
-            st.markdown(
-                f"<div style='font-size:0.7rem;color:rgba(255,255,255,0.38);text-align:center;"
-                f"margin-bottom:16px'>{t('source_noaa')} · {latest_date}</div>",
-                unsafe_allow_html=True,
-            )
-
-        st.markdown(
-            "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.15);margin:12px 0 16px'>",
-            unsafe_allow_html=True,
-        )
-
-        # ── Simulate scenario ─────────────────────────────────────
-        with st.expander(t("simulate")):
-            display_opts = t("enso_opts")
-            phase_to_simple = {"El Niño": "🔴  El Niño", "La Niña": "🔵  La Niña", "Neutral": "🟢  Normal"}
-            auto_idx = next(
-                (i for i, opt in enumerate(display_opts)
-                 if opt == phase_to_simple.get(latest_phase, "🟢  Normal")),
-                0,
-            )
-            sim_display  = st.selectbox(t("override"), display_opts, index=auto_idx)
-            sim_phase    = {"🔴  El Niño": "El Niño", "🔵  La Niña": "La Niña", "🟢  Normal": "Neutral"}[sim_display]
-            if sim_phase != latest_phase:
-                _, oni_val   = ENSO_OPTIONS[sim_display]
-                latest_phase = sim_phase
-                st.info(t("sim_warning"))
 
     tab1, tab2 = st.tabs([t("tab_calendar"), t("tab_weather")])
     with tab1:
-        page_farmer(clim, latest_phase, oni_val, grid_clim)
+        page_farmer(clim, latest_phase, oni_val, grid_clim,
+                    latest_oni=latest_oni, latest_date=latest_date)
     with tab2:
         page_weather()
 

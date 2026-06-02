@@ -12,6 +12,7 @@ import requests
 import datetime
 import warnings
 import geopandas as gpd
+from urllib.parse import quote
 warnings.filterwarnings("ignore")
 
 st.set_page_config(
@@ -315,6 +316,9 @@ T = {
                          "**Prepare supplemental irrigation** or consider delaying planting."),
         "warn_peat": ("🟤 **PEATLAND AREA NOTICE** — Agricultural activities on peatland carry additional risk of "
                       "subsidence and fire during dry spells. Consult BRG guidelines before proceeding."),
+        "sec_timeline": "🗓️ Planting Timeline — Full Year",
+        "wa_btn":       "📲 Share via WhatsApp",
+        "wa_rec":       "Planting Recommendation",
         "farmer_go":   "✅ PLANT NOW",
         "farmer_cau":  "⚠️ BE CAREFUL",
         "farmer_stop": "❌ DELAY PLANTING",
@@ -439,6 +443,9 @@ T = {
                          "**Siapkan irigasi tambahan** atau pertimbangkan menunda waktu tanam."),
         "warn_peat": ("🟤 **PERHATIAN LAHAN GAMBUT** — Aktivitas pertanian di lahan gambut berisiko penurunan muka tanah "
                       "dan kebakaran saat musim kering. Konsultasikan dengan pedoman BRG sebelum memulai."),
+        "sec_timeline": "🗓️ Jadwal Tanam — Sepanjang Tahun",
+        "wa_btn":       "📲 Bagikan via WhatsApp",
+        "wa_rec":       "Rekomendasi Tanam",
         "farmer_go":   "✅ TANAM SEKARANG",
         "farmer_cau":  "⚠️ HATI-HATI",
         "farmer_stop": "❌ TUNDA DULU",
@@ -1187,6 +1194,69 @@ def make_kabupaten_rainfall_chart(grid_clim, mapping, kab_name, enso_phase):
     return fig
 
 
+def make_planting_timeline(clim, enso_phase, oni_val, lang):
+    """12-month suitability heatmap (Gantt-style) for all crops."""
+    months = list(range(1, 13))
+    ml     = [mname(m) for m in months]
+    crops_l = list(CROPS.keys())
+
+    z     = [[planting_score(clim, cn, m, oni_val)["score"] for m in months]
+             for cn in crops_l]
+    y_lbl = [f"{CROPS[c]['icon']} {t(c)}" for c in crops_l]
+
+    # Threshold colorscale: red 0-50, amber 50-75, green 75-100
+    cs = [[0.00, "#fadbd8"], [0.499, "#fadbd8"],
+          [0.50, "#fef9e7"], [0.749, "#fef9e7"],
+          [0.75, "#d5f5e3"], [1.00, "#1a6934"]]
+
+    fig = go.Figure(go.Heatmap(
+        z=z, x=ml, y=y_lbl,
+        colorscale=cs, zmin=0, zmax=100,
+        text=[[f"{int(v)}" for v in row] for row in z],
+        texttemplate="<b>%{text}</b>",
+        textfont=dict(size=11),
+        showscale=False,
+        xgap=3, ygap=4,
+        hovertemplate="<b>%{y}</b><br>%{x}: <b>%{z:.0f}</b>/100<extra></extra>",
+    ))
+
+    # Current month marker
+    cur = datetime.datetime.now().month
+    now_lbl = "Now" if lang == "en" else "Skrg"
+    fig.add_vline(
+        x=ml[cur - 1],
+        line=dict(color="#2c3e50", width=2, dash="dot"),
+        annotation_text=f"◀ {now_lbl}",
+        annotation_font=dict(size=10, color="#2c3e50"),
+        annotation_position="top right",
+    )
+
+    # Best planting month marker per crop
+    for i, cn in enumerate(crops_l):
+        best_m = max(months, key=lambda m: z[i][m - 1])
+        fig.add_annotation(
+            x=ml[best_m - 1], y=y_lbl[i],
+            text="🌱", showarrow=False,
+            font=dict(size=14), yshift=22,
+        )
+        if CROPS[cn]["duration"] < 12:
+            harv_m = wrap_month(best_m + CROPS[cn]["duration"])
+            fig.add_annotation(
+                x=ml[harv_m - 1], y=y_lbl[i],
+                text="🌾", showarrow=False,
+                font=dict(size=13), yshift=22,
+            )
+
+    fig.update_layout(
+        height=200,
+        margin=dict(l=5, r=5, t=42, b=5),
+        plot_bgcolor="white", paper_bgcolor="white",
+        xaxis=dict(side="top", showgrid=False, tickfont=dict(size=11)),
+        yaxis=dict(showgrid=False, tickfont=dict(size=12)),
+    )
+    return fig
+
+
 def kabupaten_map_bounds(mapping, kab_name):
     """Return (center_lat, center_lon, zoom) for a kabupaten's grid points."""
     pts = [(float(c.split("_")[0]), float(c.split("_")[1]))
@@ -1330,6 +1400,14 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
             delta=_st,
             delta_color="off",
         )
+
+    # ── PLANTING TIMELINE ────────────────────────────────────────
+    st.markdown(
+        f"<div class='section-header'>{t('sec_timeline')}</div>",
+        unsafe_allow_html=True,
+    )
+    st.plotly_chart(make_planting_timeline(clim, enso_phase, oni_val, lang),
+                    use_container_width=True)
 
     # ── MAPS + KECAMATAN (shown first) ───────────────────────────
     if grid_clim is not None:
@@ -1549,6 +1627,23 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
             crop=t(best_crop),
             month=upcoming[best_crop]["best_month_name"],
         ))
+
+    # ── WHATSAPP SHARE ────────────────────────────────────────────
+    area_wa = selected_kab or "Kalimantan Tengah"
+    wa_lines = [
+        f"🌾 {t('wa_rec')} — {area_wa}",
+        f"📅 {mname(current_month)} · {enso_phase} (ONI {latest_oni:+.2f})",
+        "",
+    ]
+    for cn, info in upcoming.items():
+        icon = CROPS[cn]["icon"]
+        s    = info["score"]
+        flag = "✅" if s >= 75 else ("⚠️" if s >= 50 else "❌")
+        wa_lines.append(f"{flag} {icon} {t(cn)}: score {s} → {info['best_month_name']}")
+    wa_lines += ["", "🔗 https://planting-calender.streamlit.app"]
+    wa_text = "\n".join(wa_lines)
+    wa_url  = f"https://wa.me/?text={quote(wa_text)}"
+    st.link_button(t("wa_btn"), wa_url, use_container_width=False)
 
     # ── MONTHLY CALENDAR TABLE ────────────────────────────────────
     st.markdown(

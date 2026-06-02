@@ -4,6 +4,7 @@ Central Kalimantan, Indonesia — BMKG Blending 1991–2020 + ENSO (ONI)
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -1741,6 +1742,31 @@ def main():
                 _, oni_val   = ENSO_OPTIONS[sim_display]
                 latest_phase = sim_phase
                 st.info(t("sim_warning"))
+
+    components.html("""
+<script>
+(function() {
+    function attachBMKG() {
+        try {
+            var tabs = window.parent.document.querySelectorAll('[role="tab"]');
+            for (var i = 0; i < tabs.length; i++) {
+                var txt = (tabs[i].innerText || tabs[i].textContent || '').trim();
+                if (txt.indexOf('Cuaca') >= 0 || txt.indexOf('Weather') >= 0) {
+                    tabs[i].onclick = function() {
+                        window.parent.open(
+                            'https://www.bmkg.go.id/cuaca/prakiraan-cuaca-provinsi.bmkg?Prov=18',
+                            '_blank'
+                        );
+                    };
+                    break;
+                }
+            }
+        } catch(e) {}
+    }
+    setTimeout(attachBMKG, 400);
+})();
+</script>
+""", height=0)
 
     tab1, tab2 = st.tabs([t("tab_calendar"), t("tab_weather")])
     with tab1:

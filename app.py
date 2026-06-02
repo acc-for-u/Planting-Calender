@@ -1223,12 +1223,18 @@ def make_planting_timeline(clim, enso_phase, oni_val, lang):
     # Current month marker
     cur = datetime.datetime.now().month
     now_lbl = "Now" if lang == "en" else "Skrg"
-    fig.add_vline(
-        x=ml[cur - 1],
+    fig.add_shape(
+        type="line",
+        x0=ml[cur - 1], x1=ml[cur - 1],
+        y0=0, y1=1, yref="paper",
         line=dict(color="#2c3e50", width=2, dash="dot"),
-        annotation_text=f"◀ {now_lbl}",
-        annotation_font=dict(size=10, color="#2c3e50"),
-        annotation_position="top right",
+    )
+    fig.add_annotation(
+        x=ml[cur - 1], y=1.08, yref="paper",
+        text=f"▼ {now_lbl}",
+        showarrow=False,
+        font=dict(size=10, color="#2c3e50"),
+        xanchor="center",
     )
 
     # Best planting month marker per crop

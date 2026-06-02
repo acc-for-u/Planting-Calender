@@ -309,11 +309,9 @@ T = {
         "tab_calendar": "🌾 Planting Calendar",
         "tab_weather":  "🌤️ Current Weather",
         "weather_title": "Current Weather — Central Kalimantan",
-        "weather_desc": ("Check the latest weather forecast and warnings directly from "
-                         "BMKG (Indonesian Agency for Meteorology, Climatology and Geophysics)."),
+        "weather_source": "📍 Palangka Raya — Source: BMKG · Click a card to open full forecast",
+        "weather_unavail": "Weather data unavailable. Click below to view on BMKG.",
         "weather_btn":  "🌐 Open BMKG Weather Forecast",
-        "weather_btn2": "⚠️ Open BMKG Early Warning",
-        "weather_note": "Links open in a new tab.",
     },
     "id": {
         "brand": "Kalender Tanam", "region": "KALIMANTAN TENGAH",
@@ -434,11 +432,9 @@ T = {
         "tab_calendar": "🌾 Kalender Tanam",
         "tab_weather":  "🌤️ Cuaca Terkini",
         "weather_title": "Cuaca Terkini — Kalimantan Tengah",
-        "weather_desc": ("Cek prakiraan cuaca dan peringatan dini terbaru langsung dari "
-                         "BMKG (Badan Meteorologi, Klimatologi dan Geofisika)."),
+        "weather_source": "📍 Palangka Raya — Sumber: BMKG · Klik kartu untuk lihat prakiraan lengkap",
+        "weather_unavail": "Data cuaca tidak tersedia. Klik di bawah untuk lihat di BMKG.",
         "weather_btn":  "🌐 Buka Prakiraan Cuaca BMKG",
-        "weather_btn2": "⚠️ Buka Peringatan Dini BMKG",
-        "weather_note": "Link terbuka di tab baru.",
     },
 }
 
@@ -1532,27 +1528,48 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
 # WEATHER PAGE
 # =====================================================================
 def page_weather():
+    BMKG_URL = "https://www.bmkg.go.id/cuaca/prakiraan-cuaca/62"
+
     st.markdown(
         f"<div class='section-header'>{t('weather_title')}</div>",
         unsafe_allow_html=True,
     )
-    st.markdown(t("weather_desc"))
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.link_button(
-            t("weather_btn"),
-            "https://www.bmkg.go.id/cuaca/prakiraan-cuaca-provinsi.bmkg?Prov=18",
-            use_container_width=True,
-        )
-    with col2:
-        st.link_button(
-            t("weather_btn2"),
-            "https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca.bmkg",
-            use_container_width=True,
-        )
-    st.caption(t("weather_note"))
+    days = fetch_bmkg_weather()
+    lang = st.session_state.get("lang", "en")
+
+    if days:
+        day_names_en = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+        day_names_id = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"]
+        cols = st.columns(len(days))
+        for col, day in zip(cols, days):
+            with col:
+                desc = day["desc_id"] if lang == "id" else day["desc_en"]
+                date_obj = datetime.datetime.strptime(day["date"], "%Y-%m-%d")
+                wd = date_obj.weekday()
+                day_label = (day_names_id[wd] if lang == "id" else day_names_en[wd])
+                date_label = date_obj.strftime("%d %b")
+                st.markdown(f"""
+<a href="{BMKG_URL}" target="_blank" style="text-decoration:none;">
+  <div style="background:white;border-radius:12px;padding:14px 10px;text-align:center;
+              box-shadow:0 2px 8px rgba(0,0,0,0.10);border:1px solid #d4e6d4;
+              cursor:pointer;transition:box-shadow 0.2s;">
+    <div style="font-weight:700;color:#1a6934;font-size:14px">{day_label}</div>
+    <div style="font-size:12px;color:#888;margin-bottom:6px">{date_label}</div>
+    <img src="{day['icon_url']}" width="56" style="display:block;margin:0 auto 6px">
+    <div style="font-size:12px;color:#444;min-height:32px;line-height:1.3">{desc}</div>
+    <div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-top:6px">
+      {day['temp_max']}° / {day['temp_min']}°C
+    </div>
+    <div style="font-size:11px;color:#777;margin-top:3px">
+      💧 {day['humidity']}% &nbsp;🌧️ {day['rain_total']} mm
+    </div>
+  </div>
+</a>""", unsafe_allow_html=True)
+        st.caption(t("weather_source"))
+    else:
+        st.info(t("weather_unavail"))
+        st.link_button(t("weather_btn"), BMKG_URL, use_container_width=True)
 
 
 # =====================================================================
@@ -1742,31 +1759,6 @@ def main():
                 _, oni_val   = ENSO_OPTIONS[sim_display]
                 latest_phase = sim_phase
                 st.info(t("sim_warning"))
-
-    components.html("""
-<script>
-(function() {
-    function attachBMKG() {
-        try {
-            var tabs = window.parent.document.querySelectorAll('[role="tab"]');
-            for (var i = 0; i < tabs.length; i++) {
-                var txt = (tabs[i].innerText || tabs[i].textContent || '').trim();
-                if (txt.indexOf('Cuaca') >= 0 || txt.indexOf('Weather') >= 0) {
-                    tabs[i].onclick = function() {
-                        window.parent.open(
-                            'https://www.bmkg.go.id/cuaca/prakiraan-cuaca-provinsi.bmkg?Prov=18',
-                            '_blank'
-                        );
-                    };
-                    break;
-                }
-            }
-        } catch(e) {}
-    }
-    setTimeout(attachBMKG, 400);
-})();
-</script>
-""", height=0)
 
     tab1, tab2 = st.tabs([t("tab_calendar"), t("tab_weather")])
     with tab1:

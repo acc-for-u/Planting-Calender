@@ -1767,7 +1767,7 @@ def page_weather():
 
     st.markdown("<br>", unsafe_allow_html=True)
     warn_lbl = "⚠️ BMKG Early Warning — Central Kalimantan" if lang == "en" else "⚠️ Peringatan Dini Cuaca BMKG — Kalteng"
-    st.link_button(warn_lbl, "https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca.bmkg",
+    st.link_button(warn_lbl, "https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca",
                    use_container_width=True)
 
 

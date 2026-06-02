@@ -1498,9 +1498,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                     st.markdown(
                         f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
                         f"color:{crop['color']};margin-bottom:4px'>"
-                        f"{crop['icon']} {t(crop_name)}</div>"
-                        f"<div style='text-align:center;font-size:0.82rem;color:#555;margin-bottom:6px'>"
-                        f"{t('start_in')} {mname(best_m)}</div>",
+                        f"{crop['icon']} {t(crop_name)}</div>",
                         unsafe_allow_html=True,
                     )
                     with st.spinner(f"{t(crop_name)}..."):
@@ -1532,9 +1530,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                     st.markdown(
                         f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
                         f"color:{crop['color']};margin-bottom:4px'>"
-                        f"{crop['icon']} {t(crop_name)}</div>"
-                        f"<div style='text-align:center;font-size:0.82rem;color:#555;margin-bottom:6px'>"
-                        f"{t('start_in')} {mname(best_m)}</div>",
+                        f"{crop['icon']} {t(crop_name)}</div>",
                         unsafe_allow_html=True,
                     )
                     with st.spinner(f"{t(crop_name)}..."):

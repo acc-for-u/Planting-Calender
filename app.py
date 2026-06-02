@@ -102,7 +102,7 @@ CLIM_FALLBACK = pd.DataFrame({
 from pathlib import Path
 _BASE = Path(__file__).parent
 
-DEFAULT_RAIN_PATH   = _BASE / "data" / "CH_BlendPos_CHIRP_clip.xlsx"
+DEFAULT_RAIN_PATH   = _BASE / "data" / "CH_BlendPos_CHIRP_clip.parquet"
 DEFAULT_ONI_PATH    = _BASE / "data" / "oni.ascii.txt"
 DEFAULT_SHP_PATH    = _BASE / "shp"  / "gadm41_IDN_2.shp"
 DEFAULT_IDN_JSON    = _BASE / "data" / "gadm41_IDN_1.json"
@@ -546,11 +546,15 @@ def load_oni(local_path):
             continue
     raise RuntimeError("Cannot load ONI data from URL or local file.")
 
-@st.cache_data(show_spinner=False)
+@st.cache_resource(show_spinner=False)
 def load_rain_grid(path_rain):
     """Load gridded rainfall; return spatial mean, climatology, grid climatology."""
-    df_grid = pd.read_excel(path_rain, index_col=0, engine="openpyxl")
-    df_grid.index = pd.to_datetime(df_grid.index)
+    path_rain = str(path_rain)
+    if path_rain.endswith(".parquet"):
+        df_grid = pd.read_parquet(path_rain)
+    else:
+        df_grid = pd.read_excel(path_rain, index_col=0, engine="openpyxl")
+        df_grid.index = pd.to_datetime(df_grid.index)
     df_grid = df_grid.sort_index()
     rain      = df_grid.mean(axis=1)
     clim      = monthly_climatology(rain)
@@ -692,7 +696,7 @@ def make_indonesia_context_map():
     )
     return fig
 
-@st.cache_data(show_spinner=False)
+@st.cache_resource(show_spinner=False)
 def load_kecamatan_mapping(grid_cols):
     """Spatial join: map each CHIRPS grid column to kabupaten + kecamatan."""
     from shapely.geometry import Point
@@ -734,7 +738,7 @@ def kecamatan_summary(grid_clim, crop_name, start_month, oni_val, mapping):
             rows.append({"Kabupaten": kab, "Kecamatan": kec, "score": mean_sc})
     return rows
 
-@st.cache_data(show_spinner=False)
+@st.cache_resource(show_spinner=False)
 def load_kabupaten_boundaries(shp_path):
     """Load Kalteng kabupaten boundary coordinates for map overlay."""
     gdf     = gpd.read_file(shp_path)
@@ -751,7 +755,7 @@ def load_kabupaten_boundaries(shp_path):
             all_names.append(row["NAME_2"])
     return all_lats, all_lons, all_names
 
-@st.cache_data(show_spinner=False)
+@st.cache_resource(show_spinner=False)
 def load_kecamatan_boundaries(shp_path, kabupaten_name):
     """Load kecamatan boundary coordinates for a specific kabupaten."""
     gdf = gpd.read_file(shp_path)
@@ -767,7 +771,7 @@ def load_kecamatan_boundaries(shp_path, kabupaten_name):
             all_lons.extend([c[0] for c in coords] + [None])
     return all_lats, all_lons
 
-@st.cache_data(show_spinner=False)
+@st.cache_resource(show_spinner=False)
 def load_peatland_overlay(shp_path):
     """Load peatland (gambut) polygon coordinates for Plotly overlay.
     Source: WRI Indonesia peatland shapefile (2012), clipped to Kalteng.

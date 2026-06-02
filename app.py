@@ -1407,14 +1407,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
             delta_color="off",
         )
 
-    # ── PLANTING TIMELINE ────────────────────────────────────────
-    st.markdown(
-        f"<div class='section-header'>{t('sec_timeline')}</div>",
-        unsafe_allow_html=True,
-    )
-    st.plotly_chart(make_planting_timeline(clim, enso_phase, oni_val, lang),
-                    use_container_width=True)
-
     # ── MAPS + KECAMATAN (shown first) ───────────────────────────
     if grid_clim is not None:
         try:

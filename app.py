@@ -1419,9 +1419,26 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                 tuple(grid_clim.columns.tolist()), DEFAULT_GAMBUT_PATH
             )
 
-        _peat_cap = ("⬜ Grey = Peatland — suitability not assessed."
-                     if lang == "en" else
-                     "⬜ Abu-abu = Lahan gambut — tidak dinilai.")
+        _legend = (
+            "<div style='display:flex;gap:12px;flex-wrap:wrap;align-items:center;"
+            "font-size:0.78rem;margin-top:6px'>"
+            "<span style='background:#d5f5e3;color:#1a6b3c;padding:3px 9px;"
+            "border-radius:5px;font-weight:600'>✅ " +
+            ("Recommended (≥75)" if lang == "en" else "Direkomendasikan (≥75)") +
+            "</span>"
+            "<span style='background:#fef9e7;color:#7d6608;padding:3px 9px;"
+            "border-radius:5px;font-weight:600'>⚠️ " +
+            ("Caution (50–74)" if lang == "en" else "Hati-hati (50–74)") +
+            "</span>"
+            "<span style='background:#fadbd8;color:#922b21;padding:3px 9px;"
+            "border-radius:5px;font-weight:600'>❌ " +
+            ("Not Advised (<50)" if lang == "en" else "Tidak Disarankan (<50)") +
+            "</span>"
+            "<span style='color:#888;padding:3px 0'>⬜ " +
+            ("Peatland — not assessed" if lang == "en" else "Gambut — tidak dinilai") +
+            "</span></div>"
+        )
+        _peat_cap = _legend
 
         def _render_kec_table(df_filtered):
             st.markdown(
@@ -1510,7 +1527,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                             idw_resolution=0.03, idw_bbox=kab_bbox,
                         )
                     st.plotly_chart(fig, use_container_width=True)
-            st.caption(_peat_cap)
+            st.markdown(_peat_cap, unsafe_allow_html=True)
 
         else:
             st.markdown(
@@ -1539,7 +1556,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                             b_lats, b_lons, g_lats, g_lons, peat_mask,
                         )
                     st.plotly_chart(fig, use_container_width=True)
-            st.caption(_peat_cap)
+            st.markdown(_peat_cap, unsafe_allow_html=True)
 
             with st.expander(t("sub_exp")):
                 with st.spinner(t("spatial_spin")):

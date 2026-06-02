@@ -1766,9 +1766,31 @@ def page_weather():
         st.link_button(t("weather_btn"), BMKG_URL, use_container_width=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    warn_lbl = "⚠️ BMKG Early Warning — Central Kalimantan" if lang == "en" else "⚠️ Peringatan Dini Cuaca BMKG — Kalteng"
-    st.link_button(warn_lbl, "https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca",
-                   use_container_width=True)
+    WARN_URL = "https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca"
+    if lang == "en":
+        warn_title = "⚠️ Extreme Weather Early Warning"
+        warn_sub   = "Check the latest warnings for Central Kalimantan — heavy rain, strong winds, and flood alerts issued by BMKG."
+        warn_cta   = "Open BMKG Early Warning →"
+    else:
+        warn_title = "⚠️ Peringatan Dini Cuaca Ekstrem"
+        warn_sub   = "Cek peringatan terbaru untuk Kalimantan Tengah — hujan lebat, angin kencang, dan potensi banjir dari BMKG."
+        warn_cta   = "Buka Peringatan Dini BMKG →"
+    st.markdown(
+        f"""<a href="{WARN_URL}" target="_blank" style="text-decoration:none;">
+  <div style="background:linear-gradient(135deg,#fff3cd,#ffe69c);border-radius:14px;
+              padding:20px 24px;border-left:5px solid #e6a817;
+              box-shadow:0 2px 10px rgba(230,168,23,0.2);cursor:pointer;
+              display:flex;align-items:center;gap:18px;margin-top:4px">
+    <div style="font-size:2.8rem;line-height:1">🚨</div>
+    <div style="flex:1">
+      <div style="font-weight:700;color:#7d4e00;font-size:1rem;margin-bottom:4px">{warn_title}</div>
+      <div style="font-size:0.82rem;color:#5a3800;line-height:1.5">{warn_sub}</div>
+      <div style="margin-top:8px;font-size:0.8rem;font-weight:600;color:#e6a817">{warn_cta}</div>
+    </div>
+  </div>
+</a>""",
+        unsafe_allow_html=True,
+    )
 
 
 # =====================================================================

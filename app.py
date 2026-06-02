@@ -309,7 +309,8 @@ T = {
         "tab_calendar": "🌾 Planting Calendar",
         "tab_weather":  "🌤️ Current Weather",
         "weather_title": "Current Weather — Central Kalimantan",
-        "weather_source": "📍 Palangka Raya — Source: BMKG · Click a card to open full forecast",
+        "weather_select": "Select Regency / City",
+        "weather_source": "Source: BMKG · Click a card to open full forecast",
         "weather_unavail": "Weather data unavailable. Click below to view on BMKG.",
         "weather_btn":  "🌐 Open BMKG Weather Forecast",
     },
@@ -432,7 +433,8 @@ T = {
         "tab_calendar": "🌾 Kalender Tanam",
         "tab_weather":  "🌤️ Cuaca Terkini",
         "weather_title": "Cuaca Terkini — Kalimantan Tengah",
-        "weather_source": "📍 Palangka Raya — Sumber: BMKG · Klik kartu untuk lihat prakiraan lengkap",
+        "weather_select": "Pilih Kabupaten / Kota",
+        "weather_source": "Sumber: BMKG · Klik kartu untuk lihat prakiraan lengkap",
         "weather_unavail": "Data cuaca tidak tersedia. Klik di bawah untuk lihat di BMKG.",
         "weather_btn":  "🌐 Buka Prakiraan Cuaca BMKG",
     },
@@ -444,13 +446,30 @@ def t(key):
 def mname(m):
     return t("months")[m - 1]
 
+KABUPATEN_KALTENG = {
+    "Kota Palangka Raya":      ("62.71.01.1001", "62.71"),
+    "Kotawaringin Barat":      ("62.01.02.1003", "62.01"),
+    "Kotawaringin Timur":      ("62.02.05.1001", "62.02"),
+    "Kapuas":                  ("62.03.01.1006", "62.03"),
+    "Barito Selatan":          ("62.04.06.1008", "62.04"),
+    "Barito Utara":            ("62.05.05.1013", "62.05"),
+    "Katingan":                ("62.06.02.1003", "62.06"),
+    "Seruyan":                 ("62.07.01.1001", "62.07"),
+    "Sukamara":                ("62.08.01.1003", "62.08"),
+    "Lamandau":                ("62.09.03.1005", "62.09"),
+    "Gunung Mas":              ("62.10.02.1012", "62.10"),
+    "Pulang Pisau":            ("62.11.05.1005", "62.11"),
+    "Murung Raya":             ("62.12.01.1012", "62.12"),
+    "Barito Timur":            ("62.13.01.1012", "62.13"),
+}
+
 @st.cache_data(show_spinner=False, ttl=3600)
-def fetch_bmkg_weather():
-    """Fetch 3-day weather forecast from BMKG for Palangka Raya (adm4=62.71.01.1001)."""
+def fetch_bmkg_weather(adm4="62.71.01.1001"):
+    """Fetch 3-day weather forecast from BMKG API."""
     try:
         resp = requests.get(
             "https://api.bmkg.go.id/publik/prakiraan-cuaca",
-            params={"adm4": "62.71.01.1001"},
+            params={"adm4": adm4},
             timeout=10,
         )
         resp.raise_for_status()
@@ -1532,32 +1551,37 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None):
 # WEATHER PAGE
 # =====================================================================
 def page_weather():
-    BMKG_URL = "https://www.bmkg.go.id/cuaca/prakiraan-cuaca/62"
-
     st.markdown(
         f"<div class='section-header'>{t('weather_title')}</div>",
         unsafe_allow_html=True,
     )
 
-    days = fetch_bmkg_weather()
+    kab_names = list(KABUPATEN_KALTENG.keys())
+    selected = st.selectbox(t("weather_select"), kab_names, index=0, label_visibility="visible")
+    adm4, adm2 = KABUPATEN_KALTENG[selected]
+    BMKG_URL = f"https://www.bmkg.go.id/cuaca/prakiraan-cuaca/{adm2}"
+
     lang = st.session_state.get("lang", "en")
+    day_names_en = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    day_names_id = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"]
+
+    with st.spinner(""):
+        days = fetch_bmkg_weather(adm4)
 
     if days:
-        day_names_en = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
-        day_names_id = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"]
         cols = st.columns(len(days))
         for col, day in zip(cols, days):
             with col:
                 desc = day["desc_id"] if lang == "id" else day["desc_en"]
                 date_obj = datetime.datetime.strptime(day["date"], "%Y-%m-%d")
                 wd = date_obj.weekday()
-                day_label = (day_names_id[wd] if lang == "id" else day_names_en[wd])
+                day_label = day_names_id[wd] if lang == "id" else day_names_en[wd]
                 date_label = date_obj.strftime("%d %b")
                 st.markdown(f"""
 <a href="{BMKG_URL}" target="_blank" style="text-decoration:none;">
   <div style="background:white;border-radius:12px;padding:14px 10px;text-align:center;
               box-shadow:0 2px 8px rgba(0,0,0,0.10);border:1px solid #d4e6d4;
-              cursor:pointer;transition:box-shadow 0.2s;">
+              cursor:pointer;">
     <div style="font-weight:700;color:#1a6934;font-size:14px">{day_label}</div>
     <div style="font-size:12px;color:#888;margin-bottom:6px">{date_label}</div>
     <img src="{day['icon_url']}" width="56" style="display:block;margin:0 auto 6px">
@@ -1570,7 +1594,7 @@ def page_weather():
     </div>
   </div>
 </a>""", unsafe_allow_html=True)
-        st.caption(t("weather_source"))
+        st.caption(f"📍 {selected} — {t('weather_source')}")
     else:
         st.info(t("weather_unavail"))
         st.link_button(t("weather_btn"), BMKG_URL, use_container_width=True)

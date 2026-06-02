@@ -337,6 +337,7 @@ T = {
         "map_exp_label": "🗺️ Suitability Maps by Area",
         "tab_calendar": "🌾 Planting Calendar",
         "tab_weather":  "🌤️ Current Weather",
+        "tab_about":    "ℹ️ About",
         "weather_title": "Current Weather — Central Kalimantan",
         "weather_select": "Select Regency / City",
         "weather_source": "Source: BMKG · Click a card to open full forecast",
@@ -464,6 +465,7 @@ T = {
         "map_exp_label": "🗺️ Peta Kesesuaian per Wilayah",
         "tab_calendar": "🌾 Kalender Tanam",
         "tab_weather":  "🌤️ Cuaca Terkini",
+        "tab_about":    "ℹ️ Tentang",
         "weather_title": "Cuaca Terkini — Kalimantan Tengah",
         "weather_select": "Pilih Kabupaten / Kota",
         "weather_source": "Sumber: BMKG · Klik kartu untuk lihat prakiraan lengkap",
@@ -1763,6 +1765,112 @@ def page_weather():
         st.info(t("weather_unavail"))
         st.link_button(t("weather_btn"), BMKG_URL, use_container_width=True)
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    warn_lbl = "⚠️ BMKG Early Warning — Central Kalimantan" if lang == "en" else "⚠️ Peringatan Dini Cuaca BMKG — Kalteng"
+    st.link_button(warn_lbl, "https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca.bmkg",
+                   use_container_width=True)
+
+
+# =====================================================================
+# ABOUT PAGE
+# =====================================================================
+def page_about():
+    lang = st.session_state.get("lang", "en")
+
+    st.markdown(
+        f"<div class='section-header'>{'About This Tool' if lang=='en' else 'Tentang Aplikasi Ini'}</div>",
+        unsafe_allow_html=True,
+    )
+    if lang == "en":
+        st.markdown(
+            "**Planting Calendar Advisor** helps smallholder farmers in Central Kalimantan "
+            "decide *when* and *what* to plant by combining 30-year rainfall climatology with "
+            "real-time ENSO conditions. Recommendations cover three main commodities: "
+            "🌾 Rice, 🌴 Oil Palm, and 🌿 Cassava."
+        )
+    else:
+        st.markdown(
+            "**Planting Calendar Advisor** membantu petani Kalimantan Tengah menentukan "
+            "*kapan* dan *apa* yang ditanam, dengan menggabungkan klimatologi curah hujan "
+            "30 tahun dengan kondisi ENSO real-time. Rekomendasi mencakup tiga komoditas utama: "
+            "🌾 Padi, 🌴 Sawit, dan 🌿 Singkong."
+        )
+
+    st.markdown("---")
+
+    # Data sources
+    st.markdown(f"### {'📊 Data Sources' if lang=='en' else '📊 Sumber Data'}")
+    data = {
+        ("Data" if lang=="en" else "Data"): [
+            "Rainfall Climatology" if lang=="en" else "Klimatologi Curah Hujan",
+            "ENSO Index (ONI)",
+            "Rainfall Forecast" if lang=="en" else "Prakiraan Curah Hujan",
+            "Administrative Boundaries" if lang=="en" else "Batas Administrasi",
+            "Peatland" if lang=="en" else "Lahan Gambut",
+        ],
+        ("Source" if lang=="en" else "Sumber"): [
+            "BMKG Blending (BMKG obs + CHIRPS)",
+            "NOAA Climate Prediction Center",
+            "Open-Meteo API",
+            "GADM v4.1",
+            "WRI Indonesia (2012)",
+        ],
+        ("Period" if lang=="en" else "Periode"): [
+            "1991–2020",
+            "1950–present" if lang=="en" else "1950–sekarang",
+            "3-month forecast" if lang=="en" else "Prakiraan 3 bulan",
+            "—",
+            "—",
+        ],
+    }
+    import pandas as _pd
+    st.dataframe(_pd.DataFrame(data), use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # Methodology
+    st.markdown(f"### {'⚙️ Scoring Methodology' if lang=='en' else '⚙️ Metodologi Penilaian'}")
+    if lang == "en":
+        st.markdown(
+            "Suitability score **S(c, m)** is computed as:\n\n"
+            "1. **Base score** — from number of water-deficit months (Sys et al., 1993): "
+            "S1 ≥75 (0 deficits) → S3 <50 (≥3 deficits)\n"
+            "2. **Depth penalty** — total water deficit depth (FAO-33)\n"
+            "3. **ENSO adjustment** — monthly rainfall multiplied by historical ENSO factors "
+            "(El Niño reduces Jul–Sep rainfall up to −50%; La Niña increases it)\n\n"
+            "Final score is clamped 0–100. Threshold: ✅ ≥75 · ⚠️ 50–74 · ❌ <50"
+        )
+    else:
+        st.markdown(
+            "Skor kesesuaian **S(c, m)** dihitung sebagai:\n\n"
+            "1. **Skor dasar** — dari jumlah bulan defisit air (Sys et al., 1993): "
+            "S1 ≥75 (0 defisit) → S3 <50 (≥3 defisit)\n"
+            "2. **Penalti kedalaman** — total kedalaman defisit air (FAO-33)\n"
+            "3. **Koreksi ENSO** — curah hujan bulanan dikalikan faktor ENSO historis "
+            "(El Niño mengurangi CH Jul–Sep hingga −50%; La Niña meningkatkan)\n\n"
+            "Skor diklem 0–100. Ambang: ✅ ≥75 · ⚠️ 50–74 · ❌ <50"
+        )
+
+    st.markdown("---")
+
+    # Disclaimer
+    st.markdown(f"### {'⚠️ Disclaimer' if lang=='en' else '⚠️ Pernyataan'}")
+    if lang == "en":
+        st.info(
+            "This tool provides planning guidance only. Actual conditions may differ due to "
+            "local microclimates, soil types, and extreme weather events. Always consult "
+            "local agricultural extension services (PPL) before making planting decisions."
+        )
+    else:
+        st.info(
+            "Aplikasi ini hanya sebagai panduan perencanaan. Kondisi aktual dapat berbeda "
+            "karena iklim mikro lokal, jenis tanah, dan kejadian cuaca ekstrem. Selalu "
+            "konsultasikan dengan penyuluh pertanian (PPL) setempat sebelum mengambil keputusan tanam."
+        )
+
+    st.markdown("---")
+    st.caption("Developed for academic purposes · S2 Water Resources Science, Technology and Appropriate Technology · 2026")
+
 
 # =====================================================================
 # MAIN
@@ -1907,12 +2015,14 @@ def main():
         )
 
 
-    tab1, tab2 = st.tabs([t("tab_calendar"), t("tab_weather")])
+    tab1, tab2, tab3 = st.tabs([t("tab_calendar"), t("tab_weather"), t("tab_about")])
     with tab1:
         page_farmer(clim, latest_phase, oni_val, grid_clim,
                     latest_oni=latest_oni, latest_date=latest_date)
     with tab2:
         page_weather()
+    with tab3:
+        page_about()
 
 
 if __name__ == "__main__":

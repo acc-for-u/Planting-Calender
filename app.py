@@ -65,6 +65,31 @@ CROPS = {
     },
 }
 
+CROP_TIPS = {
+    "en": {
+        ("Rice",     "El Niño"): "Use drought-tolerant varieties (Inpago / Inpari). El Niño can cut Jul–Sep rainfall by 30–50%.",
+        ("Rice",     "La Niña"): "Avoid low-lying fields — La Niña raises flood risk. Choose well-drained or elevated plots.",
+        ("Rice",     "Neutral"): "Good conditions. Start at the onset of the wet season for optimal yields.",
+        ("Oil Palm", "El Niño"): "Irrigate young palms (<3 yr) in dry months. Mature palms tolerate short dry spells.",
+        ("Oil Palm", "La Niña"): "Excellent rainfall. Maintain drainage channels to prevent root waterlogging.",
+        ("Oil Palm", "Neutral"): "Stable conditions. Prioritise fertilisation and weeding this season.",
+        ("Cassava",  "El Niño"): "Best pick during El Niño — high drought tolerance ensures reliable harvest.",
+        ("Cassava",  "La Niña"): "Good growth, but check drainage. Waterlogged soil can cause root rot.",
+        ("Cassava",  "Neutral"): "Reliable choice. Harvest on schedule to avoid quality loss.",
+    },
+    "id": {
+        ("Rice",     "El Niño"): "Gunakan varietas tahan kering (Inpago / Inpari). El Niño bisa kurangi CH Jul–Sep hingga 50%.",
+        ("Rice",     "La Niña"): "Hindari lahan rendah — La Niña meningkatkan risiko banjir. Pilih lahan berdrainase baik.",
+        ("Rice",     "Neutral"): "Kondisi baik. Tanam di awal musim hujan untuk hasil optimal.",
+        ("Oil Palm", "El Niño"): "Siram sawit muda (<3 tahun) saat kering. Sawit dewasa lebih tahan kekeringan.",
+        ("Oil Palm", "La Niña"): "Curah hujan bagus. Jaga saluran drainase agar akar tidak tergenang.",
+        ("Oil Palm", "Neutral"): "Kondisi stabil. Prioritaskan pemupukan dan penyiangan musim ini.",
+        ("Cassava",  "El Niño"): "Pilihan terbaik saat El Niño — toleransi kering tinggi menjamin panen.",
+        ("Cassava",  "La Niña"): "Pertumbuhan baik, tapi cek drainase. Tanah tergenang menyebabkan busuk akar.",
+        ("Cassava",  "Neutral"): "Pilihan andal. Panen tepat waktu agar kualitas tetap terjaga.",
+    },
+}
+
 ENSO_THRESH = {"elnino": 0.5, "lanina": -0.5}
 SENS_SCORE  = {"low": 2, "medium": 5, "high": 8, "very_high": 10}
 TOL_SCORE   = {"low": 2, "medium": 5, "high": 9}
@@ -1271,6 +1296,41 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
             "all":             month_scores,
         }
 
+    # ── QUICK STATS BAR ──────────────────────────────────────────
+    _curr_rain = float(clim.loc[current_month, "mean"])
+    _ann_avg   = float(clim["mean"].mean())
+    _delta_pct = (_curr_rain - _ann_avg) / _ann_avg * 100
+    _bc  = max(upcoming, key=lambda c: upcoming[c]["score"])
+    _bs  = upcoming[_bc]["score"]
+    _bm  = upcoming[_bc]["best_month_name"]
+    _bi  = CROPS[_bc]["icon"]
+    _vs  = "vs avg" if lang == "en" else "vs rata-rata"
+    _st  = (("✅ Recommended" if _bs >= 75 else ("⚠️ Caution"    if _bs >= 50 else "❌ Not Advised")) if lang == "en"
+        else ("✅ Direkomendasikan" if _bs >= 75 else ("⚠️ Hati-hati" if _bs >= 50 else "❌ Tunda")))
+
+    sq1, sq2, sq3 = st.columns(3)
+    with sq1:
+        st.metric(
+            f"🌧️ {'Rainfall' if lang == 'en' else 'Curah Hujan'} · {mname(current_month)}",
+            f"{_curr_rain:.0f} mm",
+            delta=f"{_delta_pct:+.0f}% {_vs}",
+            delta_color="off",
+        )
+    with sq2:
+        st.metric(
+            "🌱 " + ("Best Crop" if lang == "en" else "Tanaman Terbaik"),
+            f"{_bi} {t(_bc)}",
+            delta=f"Score {_bs}/100",
+            delta_color="normal" if _bs >= 75 else ("off" if _bs >= 50 else "inverse"),
+        )
+    with sq3:
+        st.metric(
+            "📅 " + ("Optimal Month" if lang == "en" else "Bulan Optimal"),
+            _bm,
+            delta=_st,
+            delta_color="off",
+        )
+
     # ── MAPS + KECAMATAN (shown first) ───────────────────────────
     if grid_clim is not None:
         try:
@@ -1468,6 +1528,9 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                 st.warning(f"**{t('farmer_cau')}**\n\n" + msg)
             else:
                 st.error(f"**{t('farmer_stop')}**\n\n" + msg)
+            _tip = CROP_TIPS.get(lang, CROP_TIPS["en"]).get((crop_name, enso_phase), "")
+            if _tip:
+                st.caption(f"💡 {_tip}")
 
     # ── SUBSTITUTION TIP ─────────────────────────────────────────
     best_crop  = max(upcoming, key=lambda c: upcoming[c]["score"])

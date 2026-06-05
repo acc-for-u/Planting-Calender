@@ -1847,28 +1847,73 @@ def page_about():
 
     st.markdown("---")
 
-    # Methodology
-    st.markdown(f"### {'⚙️ Scoring Methodology' if lang=='en' else '⚙️ Metodologi Penilaian'}")
+    # Methodology — farmer-friendly
+    st.markdown(f"### {'🌱 How Does This App Work?' if lang=='en' else '🌱 Bagaimana Cara Kerja Aplikasi Ini?'}")
     if lang == "en":
         st.markdown(
-            "Suitability score **S(c, m)** is computed as:\n\n"
-            "1. **Base score** — from number of water-deficit months (Sys et al., 1993): "
-            "S1 ≥75 (0 deficits) → S3 <50 (≥3 deficits)\n"
-            "2. **Depth penalty** — total water deficit depth (FAO-33)\n"
-            "3. **ENSO adjustment** — monthly rainfall multiplied by historical ENSO factors "
-            "(El Niño reduces Jul–Sep rainfall up to −50%; La Niña increases it)\n\n"
-            "Final score is clamped 0–100. Threshold: ✅ ≥75 · ⚠️ 50–74 · ❌ <50"
+            "This app checks the rainfall for your area and gives a simple colour signal:\n\n"
+            "🟢 **Green — PLANT NOW** · Enough rain from planting to harvest. Low risk.\n\n"
+            "🟡 **Yellow — BE CAREFUL** · Rain may fall short in some months. "
+            "Prepare water reserves or monitor conditions closely.\n\n"
+            "🔴 **Red — DELAY PLANTING** · Too little rain this season. "
+            "Higher chance of crop failure — better to wait.\n\n"
+            "---\n\n"
+            "**Three things checked for every month and location:**\n\n"
+            "1. 💧 **Rainfall vs crop water need** — does the rain cover the crop from planting to harvest?\n"
+            "2. 🌊 **El Niño / La Niña** — is this a dry year (El Niño) or a wetter-than-normal year (La Niña)?\n"
+            "3. 📍 **Your area** — each sub-district has its own rainfall pattern based on 30 years of data\n\n"
+            "---\n\n"
+            "💡 **El Niño** (red 🔴) = longer dry season, Jul–Sep rainfall can drop 30–50%. "
+            "Rice is risky — Cassava is the safer choice.\n\n"
+            "💡 **La Niña** (blue 🔵) = more rain than usual. Good for Rice, "
+            "but watch for flooding in low-lying fields.\n\n"
+            "💡 **Normal** (green 🟢) = average conditions. Follow the standard planting calendar."
         )
     else:
         st.markdown(
-            "Skor kesesuaian **S(c, m)** dihitung sebagai:\n\n"
-            "1. **Skor dasar** — dari jumlah bulan defisit air (Sys et al., 1993): "
-            "S1 ≥75 (0 defisit) → S3 <50 (≥3 defisit)\n"
-            "2. **Penalti kedalaman** — total kedalaman defisit air (FAO-33)\n"
-            "3. **Koreksi ENSO** — curah hujan bulanan dikalikan faktor ENSO historis "
-            "(El Niño mengurangi CH Jul–Sep hingga −50%; La Niña meningkatkan)\n\n"
-            "Skor diklem 0–100. Ambang: ✅ ≥75 · ⚠️ 50–74 · ❌ <50"
+            "Aplikasi ini memeriksa curah hujan di wilayah Anda dan memberikan sinyal warna sederhana:\n\n"
+            "🟢 **Hijau — TANAM SEKARANG** · Hujan cukup dari tanam hingga panen. Risiko rendah.\n\n"
+            "🟡 **Kuning — HATI-HATI** · Hujan mungkin kurang di beberapa bulan. "
+            "Siapkan cadangan air atau pantau terus kondisi lapangan.\n\n"
+            "🔴 **Merah — TUNDA DULU** · Curah hujan terlalu rendah musim ini. "
+            "Risiko gagal panen lebih tinggi — lebih baik tunggu bulan berikutnya.\n\n"
+            "---\n\n"
+            "**Tiga hal yang dicek untuk setiap bulan dan lokasi:**\n\n"
+            "1. 💧 **Kebutuhan air tanaman vs hujan** — apakah hujan cukup dari tanam sampai panen?\n"
+            "2. 🌊 **El Niño / La Niña** — apakah tahun ini kering (El Niño) atau lebih basah dari biasa (La Niña)?\n"
+            "3. 📍 **Wilayah Anda** — setiap kecamatan punya pola hujan berbeda berdasarkan data 30 tahun\n\n"
+            "---\n\n"
+            "💡 **El Niño** (merah 🔴) = musim kering lebih panjang, hujan Jul–Sep bisa turun 30–50%. "
+            "Padi berisiko — Singkong pilihan lebih aman.\n\n"
+            "💡 **La Niña** (biru 🔵) = hujan lebih banyak dari biasanya. Bagus untuk Padi, "
+            "tapi waspadai banjir di lahan rendah.\n\n"
+            "💡 **Normal** (hijau 🟢) = kondisi rata-rata. Ikuti kalender tanam biasa."
         )
+
+    with st.expander("⚙️ Technical Methodology — For Agricultural Extension Workers (PPL)" if lang == "en"
+                     else "⚙️ Metodologi Teknis — Untuk Penyuluh Pertanian (PPL)"):
+        if lang == "en":
+            st.markdown(
+                "Suitability score **S(c, m)** = Base score − Depth penalty − ENSO adjustment, clamped 0–100.\n\n"
+                "- **Base score**: number of water-deficit months (Sys et al., 1993) — "
+                "0 deficits→85, 1→63, 2→38, 3→18, ≥4→10\n"
+                "- **Depth penalty**: FAO-33 deficit depth — >−100 mm→0, <−100→8, <−200→15\n"
+                "- **ENSO factor**: monthly rainfall multiplied by CHIRPS-derived ENSO factors "
+                "(El Niño: Jul −59%, Aug −51%, Sep −52%; La Niña: Jul +31%, Aug +48%, Sep +33%)\n"
+                "- **Thresholds**: ✅ ≥75 · ⚠️ 50–74 · ❌ <50\n"
+                "- **Data**: BMKG Blending 1991–2020, ONI (NOAA CPC), Open-Meteo 3-month forecast"
+            )
+        else:
+            st.markdown(
+                "Skor kesesuaian **S(c, m)** = Skor dasar − Penalti kedalaman − Koreksi ENSO, diklem 0–100.\n\n"
+                "- **Skor dasar**: jumlah bulan defisit air (Sys et al., 1993) — "
+                "0 defisit→85, 1→63, 2→38, 3→18, ≥4→10\n"
+                "- **Penalti kedalaman**: defisit FAO-33 — >−100 mm→0, <−100→8, <−200→15\n"
+                "- **Faktor ENSO**: CH bulanan dikalikan faktor ENSO dari CHIRPS "
+                "(El Niño: Jul −59%, Agu −51%, Sep −52%; La Niña: Jul +31%, Agu +48%, Sep +33%)\n"
+                "- **Ambang batas**: ✅ ≥75 · ⚠️ 50–74 · ❌ <50\n"
+                "- **Data**: BMKG Blending 1991–2020, ONI (NOAA CPC), prakiraan Open-Meteo 3 bulan"
+            )
 
     st.markdown("---")
 

@@ -686,6 +686,10 @@ def planting_score(clim, crop_name, start_month, oni_val):
     if total_deficit < -200:   score -= 15
     elif total_deficit < -100: score -= 8
 
+    # Optimal start month bonus (same as score_grid_points_vec)
+    if start_month in crop["optimal_start"]:
+        score += 5
+
     # ENSO penalty/bonus — differentiated by magnitude, proportional to Ky (FAO-33)
     enso_detailed = classify_enso_detailed(oni_val)
     score += ENSO_SCORE_DELTA[enso_detailed][crop["enso_sens"]]
@@ -1638,7 +1642,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         s    = info["score"]
         flag = "✅" if s >= 75 else ("⚠️" if s >= 50 else "❌")
         wa_lines.append(f"{flag} {icon} {t(cn)}: score {s} → {info['best_month_name']}")
-    wa_lines += ["", "🔗 https://planting-calender.streamlit.app"]
+    wa_lines += ["", "🔗 https://planting-calendar.streamlit.app"]
     wa_text = "\n".join(wa_lines)
     wa_url  = f"https://wa.me/?text={quote(wa_text)}"
     st.link_button(t("wa_btn"), wa_url, use_container_width=False)

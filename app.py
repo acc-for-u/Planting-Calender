@@ -512,25 +512,29 @@ def fetch_bmkg_weather(adm4="62.71.01.1001"):
         for slots in raw_days:
             if not slots:
                 continue
-            date_str = slots[0]["local_datetime"][:10]
-            temps  = [s["t"]  for s in slots]
-            hums   = [s["hu"] for s in slots]
-            rains  = [s["tp"] for s in slots]
-            winds  = [s["ws"] for s in slots]
-            # pick midday slot (12:00 local) or first slot for dominant condition
-            mid = next((s for s in slots if "12:00" in s["local_datetime"]), slots[len(slots)//2])
-            days.append({
-                "date":        date_str,
-                "temp_max":    max(temps),
-                "temp_min":    min(temps),
-                "humidity":    round(sum(hums) / len(hums)),
-                "rain_total":  round(sum(rains), 1),
-                "wind_avg":    round(sum(winds) / len(winds), 1),
-                "desc_id":     mid["weather_desc"],
-                "desc_en":     mid["weather_desc_en"],
-                "icon_url":    mid["image"],
-                "slots":       slots,
-            })
+            try:
+                date_str = slots[0]["local_datetime"][:10]
+                temps  = [s["t"]  for s in slots if "t"  in s]
+                hums   = [s["hu"] for s in slots if "hu" in s]
+                rains  = [s["tp"] for s in slots if "tp" in s]
+                winds  = [s["ws"] for s in slots if "ws" in s]
+                if not temps:
+                    continue
+                mid = next((s for s in slots if "12:00" in s.get("local_datetime", "")), slots[len(slots)//2])
+                days.append({
+                    "date":        date_str,
+                    "temp_max":    max(temps),
+                    "temp_min":    min(temps),
+                    "humidity":    round(sum(hums) / len(hums)) if hums else 0,
+                    "rain_total":  round(sum(rains), 1),
+                    "wind_avg":    round(sum(winds) / len(winds), 1) if winds else 0,
+                    "desc_id":     mid.get("weather_desc", ""),
+                    "desc_en":     mid.get("weather_desc_en", ""),
+                    "icon_url":    mid.get("image", ""),
+                    "slots":       slots,
+                })
+            except Exception:
+                continue
         return days if days else None
     except Exception:
         return None
@@ -649,7 +653,7 @@ def water_balance(clim, crop_name, start_month, oni_val):
     rows = []
     for i, need in enumerate(crop["water_need"]):
         m         = wrap_month(start_month + i)
-        base_rain = clim.loc[m, "mean"]
+        base_rain = float(clim.loc[m, "mean"]) if m in clim.index else float(CLIM_FALLBACK.loc[m, "mean"])
         adj_rain  = base_rain * ENSO_FACTORS[m][enso]
         rows.append({
             "month":         m,
@@ -942,6 +946,8 @@ def score_grid_points_vec(grid_clim, crop_name, start_month, oni_val):
 
     for i, need in enumerate(crop["water_need"]):
         m        = wrap_month(start_month + i)
+        if m not in grid_clim.index:
+            continue
         adj_rain = grid_clim.loc[m].values * ENSO_FACTORS[m][enso]
         balance  = adj_rain - need
         def_c   += (balance < 0).astype(float)
@@ -976,6 +982,9 @@ def compute_idw_surface(lats_src, lons_src, scores_src, resolution=0.1, power=2,
     lats_src   = np.array(lats_src)
     lons_src   = np.array(lons_src)
     scores_src = np.array(scores_src, dtype=float)
+
+    if len(lats_src) == 0:
+        return (), (), ()
 
     if bbox:
         lat_min, lat_max, lon_min, lon_max = bbox
@@ -1302,8 +1311,9 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
     if forecast_rain:
         clim = clim.copy()
         for m, rain in forecast_rain.items():
-            clim.loc[m, "mean"] = rain
-    clim_kalteng = clim  # save all-Kalteng clim before possible kabupaten override
+            if isinstance(m, int) and 1 <= m <= 12:
+                clim.loc[m, "mean"] = rain
+    clim_kalteng = clim.copy()  # save all-Kalteng clim before possible kabupaten override
 
     # ── ENSO card (left) | Kabupaten selector (right) ────────────
     col_enso, col_kab = st.columns([1, 3], gap="medium")
@@ -1595,9 +1605,8 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                 st.caption(f"💡 {_tip}")
 
     # ── SUBSTITUTION TIP ─────────────────────────────────────────
-    best_crop  = max(upcoming, key=lambda c: upcoming[c]["score"])
-    best_score = upcoming[best_crop]["score"]
-    all_bad    = all(upcoming[c]["score"] < 50 for c in CROPS)
+    best_crop = max(upcoming, key=lambda c: upcoming[c]["score"])
+    all_bad   = all(upcoming[c]["score"] < 50 for c in CROPS)
 
     if all_bad:
         st.error(t("tip_none"))

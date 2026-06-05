@@ -1548,11 +1548,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
             with st.expander(t("sub_exp")):
                 with st.spinner(t("spatial_spin")):
                     pivot = _build_kec_pivot()
-                kab_list_exp    = sorted(pivot["Kabupaten"].unique())
-                sel_kab_exp     = st.selectbox(t("sub_sel"), kab_list_exp)
-                df_filtered_exp = pivot[pivot["Kabupaten"] == sel_kab_exp].drop(
-                    columns=["Kabupaten"]).reset_index(drop=True)
-                _render_kec_table(df_filtered_exp)
+                _render_kec_table(pivot.drop(columns=["Kabupaten"]).reset_index(drop=True))
 
     # ── WHAT TO DO IN THE NEXT 3 MONTHS ──────────────────────────
     kab_label = selected_kab if selected_kab else "Kalimantan Tengah"

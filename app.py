@@ -1398,7 +1398,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         st.metric(
             "🌱 " + ("Best Crop" if lang == "en" else "Tanaman Terbaik"),
             f"{_bi} {t(_bc)}",
-            delta=f"Score {_bs}/100",
+            delta=_st,
             delta_color="normal" if _bs >= 75 else ("off" if _bs >= 50 else "inverse"),
         )
     with sq3:
@@ -1478,70 +1478,72 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                 f"<div class='section-header'>{t('sec_map')} — {selected_kab}</div>",
                 unsafe_allow_html=True,
             )
-            st.caption(t("map_caption"))
-            clat, clon, zoom_kab = kabupaten_map_bounds(mapping_kab, selected_kab)
-            kec_lats, kec_lons   = load_kecamatan_boundaries(DEFAULT_KEC_PATH, selected_kab)
+            with st.expander(t("map_exp_label")):
+                st.caption(t("map_caption"))
+                clat, clon, zoom_kab = kabupaten_map_bounds(mapping_kab, selected_kab)
+                kec_lats, kec_lons   = load_kecamatan_boundaries(DEFAULT_KEC_PATH, selected_kab)
 
-            # Kabupaten bounding box for fine-resolution IDW
-            kab_pts = [(float(c.split("_")[0]), float(c.split("_")[1]))
-                       for c, (kab, _) in mapping_kab.items() if kab == selected_kab]
-            if kab_pts:
-                kp_lats, kp_lons = zip(*kab_pts)
-                pad = 0.05
-                kab_bbox = (min(kp_lats)-pad, max(kp_lats)+pad,
-                            min(kp_lons)-pad, max(kp_lons)+pad)
-            else:
-                kab_bbox = None
-            map_cols = st.columns(3)
-            for col, crop_name in zip(map_cols, CROPS.keys()):
-                crop   = CROPS[crop_name]
-                best_m = upcoming[crop_name]["best_month"]
-                with col:
-                    st.markdown(
-                        f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
-                        f"color:{crop['color']};margin-bottom:4px'>"
-                        f"{crop['icon']} {t(crop_name)}</div>",
-                        unsafe_allow_html=True,
-                    )
-                    with st.spinner(f"{t(crop_name)}..."):
-                        fig = make_crop_map(
-                            grid_clim, crop_name, best_m, oni_val,
-                            b_lats, b_lons, g_lats, g_lons, peat_mask,
-                            center_lat=clat, center_lon=clon, zoom=zoom_kab,
-                            kec_lats=kec_lats, kec_lons=kec_lons,
-                            idw_resolution=0.03, idw_bbox=kab_bbox,
+                # Kabupaten bounding box for fine-resolution IDW
+                kab_pts = [(float(c.split("_")[0]), float(c.split("_")[1]))
+                           for c, (kab, _) in mapping_kab.items() if kab == selected_kab]
+                if kab_pts:
+                    kp_lats, kp_lons = zip(*kab_pts)
+                    pad = 0.05
+                    kab_bbox = (min(kp_lats)-pad, max(kp_lats)+pad,
+                                min(kp_lons)-pad, max(kp_lons)+pad)
+                else:
+                    kab_bbox = None
+                map_cols = st.columns(3)
+                for col, crop_name in zip(map_cols, CROPS.keys()):
+                    crop   = CROPS[crop_name]
+                    best_m = upcoming[crop_name]["best_month"]
+                    with col:
+                        st.markdown(
+                            f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
+                            f"color:{crop['color']};margin-bottom:4px'>"
+                            f"{crop['icon']} {t(crop_name)}</div>",
+                            unsafe_allow_html=True,
                         )
-                    st.plotly_chart(fig, use_container_width=True)
-            st.caption(_peat_cap)
+                        with st.spinner(f"{t(crop_name)}..."):
+                            fig = make_crop_map(
+                                grid_clim, crop_name, best_m, oni_val,
+                                b_lats, b_lons, g_lats, g_lons, peat_mask,
+                                center_lat=clat, center_lon=clon, zoom=zoom_kab,
+                                kec_lats=kec_lats, kec_lons=kec_lons,
+                                idw_resolution=0.03, idw_bbox=kab_bbox,
+                            )
+                        st.plotly_chart(fig, use_container_width=True)
+                st.caption(_peat_cap)
 
         else:
             st.markdown(
                 f"<div class='section-header'>{t('sec_map')}</div>",
                 unsafe_allow_html=True,
             )
-            st.caption(t("map_caption"))
             try:
                 st.plotly_chart(make_indonesia_context_map(), use_container_width=True)
             except Exception:
                 pass
-            map_cols = st.columns(3)
-            for col, crop_name in zip(map_cols, CROPS.keys()):
-                crop   = CROPS[crop_name]
-                best_m = upcoming[crop_name]["best_month"]
-                with col:
-                    st.markdown(
-                        f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
-                        f"color:{crop['color']};margin-bottom:4px'>"
-                        f"{crop['icon']} {t(crop_name)}</div>",
-                        unsafe_allow_html=True,
-                    )
-                    with st.spinner(f"{t(crop_name)}..."):
-                        fig = make_crop_map(
-                            grid_clim, crop_name, best_m, oni_val,
-                            b_lats, b_lons, g_lats, g_lons, peat_mask,
+            with st.expander(t("map_exp_label")):
+                st.caption(t("map_caption"))
+                map_cols = st.columns(3)
+                for col, crop_name in zip(map_cols, CROPS.keys()):
+                    crop   = CROPS[crop_name]
+                    best_m = upcoming[crop_name]["best_month"]
+                    with col:
+                        st.markdown(
+                            f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
+                            f"color:{crop['color']};margin-bottom:4px'>"
+                            f"{crop['icon']} {t(crop_name)}</div>",
+                            unsafe_allow_html=True,
                         )
-                    st.plotly_chart(fig, use_container_width=True)
-            st.caption(_peat_cap)
+                        with st.spinner(f"{t(crop_name)}..."):
+                            fig = make_crop_map(
+                                grid_clim, crop_name, best_m, oni_val,
+                                b_lats, b_lons, g_lats, g_lons, peat_mask,
+                            )
+                        st.plotly_chart(fig, use_container_width=True)
+                st.caption(_peat_cap)
 
             with st.expander(t("sub_exp")):
                 with st.spinner(t("spatial_spin")):
@@ -1589,11 +1591,9 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         else:
             harvest_line = ""
 
-        score_lbl = f"📊 Score: **{s}/100**"
         msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
                f"{prob_lbl}  \n"
-               f"{water_lbl}  \n"
-               f"{score_lbl}"
+               f"{water_lbl}"
                f"{harvest_line}")
         with col:
             if s >= 75:
@@ -1700,15 +1700,14 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         f"<span style='color:#27ae60;font-weight:600;font-size:0.9rem'>📍 {rain_area}</span></div>",
         unsafe_allow_html=True,
     )
-    st.caption(t("cal_note"))
-
-    if grid_clim is not None and selected_kab and mapping_kab:
-        fig_rain = make_kabupaten_rainfall_chart(grid_clim, mapping_kab, selected_kab, enso_phase)
-    else:
-        fig_rain = make_rainfall_envelope_chart(clim_kalteng, enso_phase)
-
-    if fig_rain:
-        st.plotly_chart(fig_rain, use_container_width=True)
+    with st.expander(t("chart_exp")):
+        st.caption(t("cal_note"))
+        if grid_clim is not None and selected_kab and mapping_kab:
+            fig_rain = make_kabupaten_rainfall_chart(grid_clim, mapping_kab, selected_kab, enso_phase)
+        else:
+            fig_rain = make_rainfall_envelope_chart(clim_kalteng, enso_phase)
+        if fig_rain:
+            st.plotly_chart(fig_rain, use_container_width=True)
 
 
 

@@ -1933,7 +1933,6 @@ def page_about():
         )
 
     st.markdown("---")
-    st.caption("Developed for academic purposes · S2 Water Resources Science, Technology and Appropriate Technology · 2026")
 
 
 # =====================================================================

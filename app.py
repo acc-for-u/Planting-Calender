@@ -1366,12 +1366,16 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
     for crop_name in CROPS:
         month_scores = {m: planting_score(clim, crop_name, m, oni_val) for m in next_3}
         best_m  = max(month_scores, key=lambda m: month_scores[m]["score"])
+        good_months = [m for m in next_3 if month_scores[m]["score"] >= 75]
+        first_good_m = good_months[0] if good_months else best_m
         upcoming[crop_name] = {
-            "best_month":      best_m,
-            "best_month_name": mname(best_m),
-            "score":           month_scores[best_m]["score"],
-            "status":          month_scores[best_m]["status"],
-            "all":             month_scores,
+            "best_month":           best_m,
+            "best_month_name":      mname(best_m),
+            "first_good_month":     first_good_m,
+            "first_good_month_name": mname(first_good_m),
+            "score":                month_scores[best_m]["score"],
+            "status":               month_scores[best_m]["status"],
+            "all":                  month_scores,
         }
 
     # ── QUICK STATS BAR ──────────────────────────────────────────
@@ -1597,12 +1601,12 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
     elif enso_phase == "El Niño" and upcoming["Rice"]["score"] < 50:
         st.info(t("tip_elnino").format(icon=CROPS["Cassava"]["icon"]))
     elif enso_phase == "La Niña" and upcoming["Rice"]["score"] >= 70:
-        st.info(t("tip_lanina").format(month=upcoming["Rice"]["best_month_name"]))
+        st.info(t("tip_lanina").format(month=upcoming["Rice"]["first_good_month_name"]))
     else:
         st.success(t("tip_normal").format(
             icon=CROPS[best_crop]["icon"],
             crop=t(best_crop),
-            month=upcoming[best_crop]["best_month_name"],
+            month=upcoming[best_crop]["first_good_month_name"],
         ))
 
     # ── WHATSAPP SHARE ────────────────────────────────────────────

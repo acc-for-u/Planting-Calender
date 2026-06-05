@@ -1551,22 +1551,18 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
     # ── SIMPLE FARMER BOXES (tampilan utama) ─────────────────────
     cols_now = st.columns(3)
     for col, crop_name in zip(cols_now, CROPS.keys()):
-        info = upcoming[crop_name]
-        crop = CROPS[crop_name]
-        s    = info["score"]
+        info  = upcoming[crop_name]
+        crop  = CROPS[crop_name]
+        s     = info["all"][current_month]["score"]   # current month score
+        s_best = info["score"]                         # best month score (for tip)
 
-        if crop["duration"] == 12:
-            harvest_str = t("perennial")
-        else:
-            harvest_m   = wrap_month(info["best_month"] + crop["duration"])
-            harvest_str = f"~{mname(harvest_m)}"
-
-        # Water label based on actual water balance for this crop
-        wb        = water_balance(clim, crop_name, info["best_month"], oni_val)
+        # Water label based on current month
+        wb        = water_balance(clim, crop_name, current_month, oni_val)
         n_deficit = int((wb["balance"] < 0).sum())
         water_lbl = t("water_ok") if n_deficit == 0 else (t("water_warn") if n_deficit <= 2 else t("water_bad"))
         prob_lbl  = t("prob_high") if s >= 75 else (t("prob_mid") if s >= 50 else t("prob_low"))
 
+        # Harvest line only when current month is already recommended
         if s >= 75:
             if crop["duration"] == 12:
                 harvest_line = f"\n🗓️ {t('harvest')}: **{t('perennial')}**"
@@ -1576,9 +1572,16 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         else:
             harvest_line = ""
 
+        # Best start hint when current month is not yet good but a later month is
+        if s < 75 and s_best >= 75:
+            best_hint = (f"\n📅 {t('best_start')}: **{info['first_good_month_name']}**")
+        else:
+            best_hint = ""
+
         msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
                f"{prob_lbl}  \n"
                f"{water_lbl}"
+               f"{best_hint}"
                f"{harvest_line}")
         with col:
             if s >= 75:

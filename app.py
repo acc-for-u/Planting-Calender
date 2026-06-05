@@ -1039,21 +1039,22 @@ def make_crop_map(grid_clim, crop_name, start_month, oni_val, b_lats, b_lons,
     )
 
     fig = go.Figure()
-    fig.add_trace(go.Scattermapbox(
-        lat=list(idw_lats), lon=list(idw_lons),
-        mode="markers",
-        marker=dict(
-            size=5,
-            color=list(idw_scores),
-            colorscale=[[0.0, "#e74c3c"], [0.5, "#f39c12"], [0.75, "#f1c40f"], [1.0, "#27ae60"]],
-            cmin=0, cmax=100,
-            opacity=0.85,
-            colorbar=dict(title="Score", thickness=10, len=0.55, x=1.0,
-                          tickvals=[0, 25, 50, 75, 100]),
-        ),
-        hovertemplate="Score: %{marker.color:.0f}<extra></extra>",
-        showlegend=False,
-    ))
+    if idw_lats:
+        fig.add_trace(go.Scattermapbox(
+            lat=list(idw_lats), lon=list(idw_lons),
+            mode="markers",
+            marker=dict(
+                size=5,
+                color=list(idw_scores),
+                colorscale=[[0.0, "#e74c3c"], [0.5, "#f39c12"], [0.75, "#f1c40f"], [1.0, "#27ae60"]],
+                cmin=0, cmax=100,
+                opacity=0.85,
+                colorbar=dict(title="Score", thickness=10, len=0.55, x=1.0,
+                              tickvals=[0, 25, 50, 75, 100]),
+            ),
+            hovertemplate="Score: %{marker.color:.0f}<extra></extra>",
+            showlegend=False,
+        ))
 
     # Peatland points — grey overlay
     if peat_mask is not None and peat_mask.any():
@@ -1460,6 +1461,8 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                          use_container_width=True, hide_index=True)
 
         def _build_kec_pivot():
+            if mapping_kab is None:
+                return pd.DataFrame()
             all_rows = []
             for cn in CROPS:
                 bm = upcoming[cn]["best_month"]
@@ -1470,6 +1473,8 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                                       f"⚠️ {t('s_cau')}" if r["score"] >= 50 else
                                       f"❌ {t('s_not')}")
                 all_rows.extend(rows)
+            if not all_rows:
+                return pd.DataFrame()
             df = pd.DataFrame(all_rows)
             pivot = df.pivot_table(index=["Kabupaten","Kecamatan"],
                                    columns="Commodity", values="Status",
@@ -1650,12 +1655,19 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
     if grid_clim is not None:
         with st.spinner(t("spatial_spin")):
             pivot_cal = _build_kec_pivot()
-        if selected_kab:
-            df_cal = pivot_cal[pivot_cal["Kabupaten"] == selected_kab].drop(
-                columns=["Kabupaten"]).reset_index(drop=True)
+        _no_data = "No sub-district data available." if lang == "en" else "Data kecamatan tidak tersedia."
+        if pivot_cal.empty or "Kabupaten" not in pivot_cal.columns:
+            st.info(_no_data)
         else:
-            df_cal = pivot_cal.drop(columns=["Kabupaten"]).reset_index(drop=True)
-        _render_kec_table(df_cal)
+            if selected_kab:
+                df_cal = pivot_cal[pivot_cal["Kabupaten"] == selected_kab].drop(
+                    columns=["Kabupaten"], errors="ignore").reset_index(drop=True)
+            else:
+                df_cal = pivot_cal.drop(columns=["Kabupaten"], errors="ignore").reset_index(drop=True)
+            if df_cal.empty:
+                st.info(_no_data)
+            else:
+                _render_kec_table(df_cal)
     else:
         crop_names   = list(CROPS.keys())
         crop_headers = [f"{CROPS[c]['icon']} {t(c)}" for c in crop_names]

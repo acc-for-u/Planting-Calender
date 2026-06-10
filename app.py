@@ -1431,7 +1431,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
     # ── MAPS + KECAMATAN (shown first) ───────────────────────────
     b_lats, b_lons   = [], []
     g_lats, g_lons   = [], []
-    peat_mask        = {}
+    peat_mask        = None
     _peat_cap        = ""
     clat, clon, zoom_kab = -1.5, 113.0, 6
     kec_lats, kec_lons   = [], []

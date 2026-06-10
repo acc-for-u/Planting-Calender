@@ -1609,10 +1609,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                 st.warning(f"**{t('farmer_cau')}**\n\n" + msg)
             else:
                 st.error(f"**{t('farmer_stop')}**\n\n" + msg)
-            tip_phase = "El Niño" if s < 50 else enso_phase
-            _tip = CROP_TIPS.get(lang, CROP_TIPS["en"]).get((crop_name, tip_phase), "")
-            if _tip:
-                st.caption(f"💡 {_tip}")
 
     # ── SUBSTITUTION TIP ─────────────────────────────────────────
     best_crop = max(upcoming, key=lambda c: upcoming[c]["score"])

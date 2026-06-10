@@ -1575,6 +1575,16 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         return ""
 
     if grid_clim is not None and mapping_kab is not None and selected_kab:
+        st.markdown(
+            f"<div style='display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap'>"
+            f"<span style='background:#d5f5e3;color:#1a6b3c;padding:4px 10px;"
+            f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_rec')}</span>"
+            f"<span style='background:#fef9e7;color:#7d6608;padding:4px 10px;"
+            f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_cau')}</span>"
+            f"<span style='background:#fadbd8;color:#922b21;padding:4px 10px;"
+            f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_not')}</span>"
+            f"</div>", unsafe_allow_html=True,
+        )
         for m in next_3:
             st.markdown(f"**📅 {mname(m)}**")
             month_rows = []
@@ -1621,75 +1631,6 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
     wa_text = "\n".join(wa_lines)
     wa_url  = f"https://wa.me/?text={quote(wa_text)}"
     st.link_button(t("wa_btn"), wa_url, use_container_width=False)
-
-    # ── KECAMATAN CALENDAR TABLE ──────────────────────────────────
-    st.markdown(
-        f"<div class='section-header'>{t('sec_calendar')} "
-        f"<span style='color:#27ae60;font-weight:600;font-size:0.9rem'>📍 {kab_label}</span>"
-        f"<span style='color:#888;font-weight:400;font-size:0.9rem'> · ({', '.join(next_3_names)})</span></div>",
-        unsafe_allow_html=True,
-    )
-    st.caption(t("cal_note"))
-
-    if grid_clim is not None:
-        with st.spinner(t("spatial_spin")):
-            pivot_cal = _build_kec_pivot()
-        _no_data = "No sub-district data available." if lang == "en" else "Data kecamatan tidak tersedia."
-        if pivot_cal.empty or "Kabupaten" not in pivot_cal.columns:
-            st.info(_no_data)
-        else:
-            if selected_kab:
-                df_cal = pivot_cal[pivot_cal["Kabupaten"] == selected_kab].drop(
-                    columns=["Kabupaten"], errors="ignore").reset_index(drop=True)
-            else:
-                df_cal = pivot_cal.drop(columns=["Kabupaten"], errors="ignore").reset_index(drop=True)
-            if df_cal.empty:
-                st.info(_no_data)
-            else:
-                _render_kec_table(df_cal)
-    else:
-        crop_names   = list(CROPS.keys())
-        crop_headers = [f"{CROPS[c]['icon']} {t(c)}" for c in crop_names]
-        rows_html = ""
-        for m in next_3:
-            is_now    = (m == current_month)
-            month_lbl = mname(m) + (f" <b style='color:#e74c3c'>{t('this_month')}</b>" if is_now else "")
-            row_bg    = "background:#fffbe6;" if is_now else ""
-            rain_mm   = forecast_rain.get(m, clim.loc[m, "mean"]) if forecast_rain else clim.loc[m, "mean"]
-            cells = ""
-            for crop_name in crop_names:
-                s  = planting_score(clim, crop_name, m, oni_val)["score"]
-                if s >= 75:
-                    cell_bg, emoji, label = "#d5f5e3", "✅", t("farmer_go")
-                elif s >= 50:
-                    cell_bg, emoji, label = "#fef9e7", "⚠️", t("farmer_cau")
-                else:
-                    cell_bg, emoji, label = "#fadbd8", "❌", t("farmer_stop")
-                cells += (
-                    f"<td style='background:{cell_bg};text-align:center;padding:8px 6px;"
-                    f"font-size:0.82rem;font-weight:600;border-radius:6px'>"
-                    f"{emoji} {label}</td>"
-                )
-            rain_src = "🛰️" if (forecast_rain and m in forecast_rain) else "📊"
-            rows_html += (
-                f"<tr style='{row_bg}'>"
-                f"<td style='padding:8px 12px;font-weight:{'700' if is_now else '400'};"
-                f"font-size:0.85rem;white-space:nowrap'>{month_lbl}"
-                f"<br><span style='font-size:0.72rem;color:#999'>{rain_src} {rain_mm:.0f} mm</span></td>"
-                f"{cells}</tr>"
-            )
-        header_cells = "".join(
-            f"<th style='text-align:center;padding:8px;font-size:0.85rem;color:#555'>{h}</th>"
-            for h in crop_headers
-        )
-        table_html = (
-            f"<table style='width:100%;border-collapse:separate;border-spacing:4px'>"
-            f"<thead><tr><th style='padding:8px 12px;text-align:left;color:#555;font-size:0.85rem'>"
-            f"{t('col_month')}</th>{header_cells}</tr></thead>"
-            f"<tbody>{rows_html}</tbody></table>"
-        )
-        st.markdown(table_html, unsafe_allow_html=True)
-    st.caption(t("forecast_on") if forecast_rain else t("forecast_off"))
 
     # ── RAINFALL CHART ────────────────────────────────────────────
     rain_area = selected_kab if selected_kab else ("Kalimantan Tengah" if lang == "en" else "Kalimantan Tengah")

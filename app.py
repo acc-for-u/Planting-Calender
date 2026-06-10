@@ -1624,29 +1624,29 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                 if all_not_advised:
                     if lang == "id":
                         action_md = (
-                            "⛔ **Semua komoditi tidak disarankan bulan ini.** "
-                            "Langkah yang bisa diambil petani:\n\n"
-                            f"- 🌿 **{t('Cassava')}** paling tahan kering — "
-                            "pertimbangkan tanam saat kondisi membaik (biasanya Okt–Nov)\n"
+                            "⛔ **Semua komoditi tidak disarankan bulan ini — tunda penanaman.** "
+                            "Langkah yang bisa diambil:\n\n"
                             "- 🛠️ Gunakan waktu ini untuk **persiapan lahan**: "
-                            "olah tanah, perbaiki drainase, pupuk dasar\n"
+                            "olah tanah, perbaiki drainase, siapkan pupuk dasar\n"
                             f"- 💧 Untuk **{t('Oil Palm')}** yang sudah ada: "
-                            "siram tanaman muda (<3 tahun) saat bulan kering\n"
-                            "- 📅 Pantau tabel bulan berikutnya — "
-                            "tanam begitu status mencapai ⚠️ atau ✅"
+                            "siram tanaman muda (<3 tahun) selama bulan kering\n"
+                            "- 📅 **Cek tabel bulan berikutnya** — mulai tanam begitu "
+                            "ada kecamatan yang mencapai status ⚠️ atau ✅\n"
+                            "- 🌿 Saat kondisi mulai membaik, **Singkong** biasanya "
+                            "pulih lebih cepat karena toleransi keringnya lebih tinggi"
                         )
                     else:
                         action_md = (
-                            "⛔ **All crops not advised this month.** "
-                            "Suggested actions for farmers:\n\n"
-                            f"- 🌿 **{t('Cassava')}** is the most drought-tolerant — "
-                            "consider planting when conditions improve (typically Oct–Nov)\n"
+                            "⛔ **All crops not advised this month — delay planting.** "
+                            "Suggested actions:\n\n"
                             "- 🛠️ Use this period for **land preparation**: "
-                            "soil tillage, drainage repair, basal fertilisation\n"
+                            "soil tillage, drainage repair, prepare basal fertiliser\n"
                             f"- 💧 For existing **{t('Oil Palm')}**: "
                             "irrigate young trees (<3 yrs) during dry months\n"
-                            "- 📅 Check the next month's table — "
-                            "plant as soon as status reaches ⚠️ or ✅"
+                            "- 📅 **Check the next month's table** — start planting once "
+                            "any sub-district reaches ⚠️ or ✅ status\n"
+                            "- 🌿 When conditions start improving, **Cassava** typically "
+                            "recovers first due to its higher drought tolerance"
                         )
                     st.warning(action_md)
     else:

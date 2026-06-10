@@ -1567,65 +1567,35 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         unsafe_allow_html=True,
     )
 
-    # ── SIMPLE FARMER BOXES (tampilan utama) ─────────────────────
-    cols_now = st.columns(3)
-    for col, crop_name in zip(cols_now, CROPS.keys()):
-        info  = upcoming[crop_name]
-        crop  = CROPS[crop_name]
-        s     = info["all"][current_month]["score"]   # current month score
-        s_best = info["score"]                         # best month score (for tip)
-
-        # Water label based on current month
-        wb        = water_balance(clim, crop_name, current_month, oni_val)
-        n_deficit = int((wb["balance"] < 0).sum())
-        water_lbl = t("water_ok") if n_deficit == 0 else (t("water_warn") if n_deficit <= 2 else t("water_bad"))
-        prob_lbl  = t("prob_high") if s >= 75 else (t("prob_mid") if s >= 50 else t("prob_low"))
-
-        # Harvest line only when current month is already recommended
-        if s >= 75:
-            if crop["duration"] == 12:
-                harvest_line = f"\n🗓️ {t('harvest')}: **{t('perennial')}**"
+    # ── MONTH × CROP TABLE ───────────────────────────────────────
+    month_col  = "📅 Bulan" if lang == "id" else "📅 Month"
+    table_rows = []
+    for m in next_3:
+        row = {month_col: mname(m)}
+        for cn, crop in CROPS.items():
+            sc = upcoming[cn]["all"][m]["score"]
+            if sc >= 75:
+                row[f"{crop['icon']} {t(cn)}"] = f"✅ {t('farmer_go')}"
+            elif sc >= 50:
+                row[f"{crop['icon']} {t(cn)}"] = f"⚠️ {t('farmer_cau')}"
             else:
-                harvest_m    = wrap_month(current_month + crop["duration"])
-                harvest_line = f"\n🗓️ {t('harvest')}: **{mname(harvest_m)}**"
-        else:
-            harvest_line = ""
+                row[f"{crop['icon']} {t(cn)}"] = f"❌ {t('farmer_stop')}"
+        table_rows.append(row)
 
-        # Best start hint when current month is not yet good but a later month is
-        if s < 75 and s_best >= 75:
-            best_hint = (f"\n📅 {t('best_start')}: **{info['first_good_month_name']}**")
-        else:
-            best_hint = ""
+    df_monthly = pd.DataFrame(table_rows)
+    crop_cols  = [c for c in df_monthly.columns if c != month_col]
 
-        msg = (f"### {crop['icon']} {t(crop_name)}\n\n"
-               f"{prob_lbl}  \n"
-               f"{water_lbl}"
-               f"{best_hint}"
-               f"{harvest_line}")
-        with col:
-            if s >= 75:
-                st.success(f"**{t('farmer_go')}**\n\n" + msg)
-            elif s >= 50:
-                st.warning(f"**{t('farmer_cau')}**\n\n" + msg)
-            else:
-                st.error(f"**{t('farmer_stop')}**\n\n" + msg)
+    def _color_status(v):
+        if "✅" in str(v): return "background-color:#d5f5e3;color:#1a6b3c;font-weight:600"
+        if "⚠️" in str(v): return "background-color:#fef9e7;color:#7d6608;font-weight:600"
+        if "❌" in str(v): return "background-color:#fadbd8;color:#922b21;font-weight:600"
+        return ""
 
-    # ── SUBSTITUTION TIP ─────────────────────────────────────────
-    best_crop = max(upcoming, key=lambda c: upcoming[c]["score"])
-    all_bad   = all(upcoming[c]["score"] < 50 for c in CROPS)
-
-    if all_bad:
-        st.error(t("tip_none"))
-    elif enso_phase == "El Niño" and upcoming["Rice"]["score"] < 50:
-        st.info(t("tip_elnino").format(icon=CROPS["Cassava"]["icon"]))
-    elif enso_phase == "La Niña" and upcoming["Rice"]["score"] >= 70:
-        st.info(t("tip_lanina").format(month=upcoming["Rice"]["first_good_month_name"]))
-    else:
-        st.success(t("tip_normal").format(
-            icon=CROPS[best_crop]["icon"],
-            crop=t(best_crop),
-            month=upcoming[best_crop]["first_good_month_name"],
-        ))
+    st.dataframe(
+        df_monthly.style.map(_color_status, subset=crop_cols),
+        use_container_width=True,
+        hide_index=True,
+    )
 
     # ── WHATSAPP SHARE ────────────────────────────────────────────
     area_wa = selected_kab or "Kalimantan Tengah"

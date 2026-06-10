@@ -1585,7 +1585,8 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                             kec_lats=kec_lats, kec_lons=kec_lons,
                             idw_resolution=0.03, idw_bbox=kab_bbox,
                         )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, use_container_width=True,
+                                    key=f"map_{m}_{crop_name}")
             if _peat_cap:
                 st.caption(_peat_cap)
             # Kecamatan table

@@ -1567,37 +1567,39 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         unsafe_allow_html=True,
     )
 
-    # ── KECAMATAN BREAKDOWN ──────────────────────────────────────
+    # ── KECAMATAN BREAKDOWN — 3 MONTHS ───────────────────────────
+    def _color_kec(v):
+        if "✅" in str(v): return "background-color:#d5f5e3;color:#1a6b3c;font-weight:600"
+        if "⚠️" in str(v): return "background-color:#fef9e7;color:#7d6608;font-weight:600"
+        if "❌" in str(v): return "background-color:#fadbd8;color:#922b21;font-weight:600"
+        return ""
+
     if grid_clim is not None and mapping_kab is not None and selected_kab:
-        all_kec_rows = []
-        for cn in CROPS:
-            bm = upcoming[cn]["best_month"]
-            kec_rows = kecamatan_summary(grid_clim, cn, bm, oni_val, mapping_kab)
-            for r in kec_rows:
-                r["Crop"]   = f"{CROPS[cn]['icon']} {t(cn)}"
-                r["Status"] = (f"✅ {t('s_rec')}" if r["score"] >= 75 else
-                               f"⚠️ {t('s_cau')}" if r["score"] >= 50 else
-                               f"❌ {t('s_not')}")
-            all_kec_rows.extend(kec_rows)
-        if all_kec_rows:
-            df_kec = pd.DataFrame(all_kec_rows)
-            df_kec = df_kec[df_kec["Kabupaten"] == selected_kab]
-            pivot_kec = df_kec.pivot_table(
-                index="Kecamatan", columns="Crop",
-                values="Status", aggfunc="first"
-            ).reset_index()
-            pivot_kec.columns.name = None
-            pivot_kec = pivot_kec.rename(columns={"Kecamatan": t("sub_col")})
-            kec_crop_cols = [c for c in pivot_kec.columns if c != t("sub_col")]
-            def _color_kec(v):
-                if "✅" in str(v): return "background-color:#d5f5e3;color:#1a6b3c;font-weight:600"
-                if "⚠️" in str(v): return "background-color:#fef9e7;color:#7d6608;font-weight:600"
-                if "❌" in str(v): return "background-color:#fadbd8;color:#922b21;font-weight:600"
-                return ""
-            st.dataframe(
-                pivot_kec.style.map(_color_kec, subset=kec_crop_cols),
-                use_container_width=True, hide_index=True,
-            )
+        for m in next_3:
+            st.markdown(f"**📅 {mname(m)}**")
+            month_rows = []
+            for cn in CROPS:
+                kec_rows = kecamatan_summary(grid_clim, cn, m, oni_val, mapping_kab)
+                for r in kec_rows:
+                    r["Crop"]   = f"{CROPS[cn]['icon']} {t(cn)}"
+                    r["Status"] = (f"✅ {t('s_rec')}" if r["score"] >= 75 else
+                                   f"⚠️ {t('s_cau')}" if r["score"] >= 50 else
+                                   f"❌ {t('s_not')}")
+                month_rows.extend(kec_rows)
+            if month_rows:
+                df_m = pd.DataFrame(month_rows)
+                df_m = df_m[df_m["Kabupaten"] == selected_kab]
+                pivot_m = df_m.pivot_table(
+                    index="Kecamatan", columns="Crop",
+                    values="Status", aggfunc="first"
+                ).reset_index()
+                pivot_m.columns.name = None
+                pivot_m = pivot_m.rename(columns={"Kecamatan": t("sub_col")})
+                kec_crop_cols = [c for c in pivot_m.columns if c != t("sub_col")]
+                st.dataframe(
+                    pivot_m.style.map(_color_kec, subset=kec_crop_cols),
+                    use_container_width=True, hide_index=True,
+                )
     else:
         st.info("📍 " + ("Pilih kabupaten di atas untuk melihat rincian per kecamatan."
                           if lang == "id" else

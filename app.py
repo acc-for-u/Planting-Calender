@@ -1553,17 +1553,18 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         if "❌" in str(v): return "background-color:#fadbd8;color:#922b21;font-weight:600"
         return ""
 
+    _legend_html = (
+        f"<div style='display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap'>"
+        f"<span style='background:#d5f5e3;color:#1a6b3c;padding:4px 10px;"
+        f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_rec')}</span>"
+        f"<span style='background:#fef9e7;color:#7d6608;padding:4px 10px;"
+        f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_cau')}</span>"
+        f"<span style='background:#fadbd8;color:#922b21;padding:4px 10px;"
+        f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_not')}</span>"
+        f"</div>"
+    )
+
     if grid_clim is not None and mapping_kab is not None and selected_kab:
-        st.markdown(
-            f"<div style='display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap'>"
-            f"<span style='background:#d5f5e3;color:#1a6b3c;padding:4px 10px;"
-            f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_rec')}</span>"
-            f"<span style='background:#fef9e7;color:#7d6608;padding:4px 10px;"
-            f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_cau')}</span>"
-            f"<span style='background:#fadbd8;color:#922b21;padding:4px 10px;"
-            f"border-radius:6px;font-size:0.82rem;font-weight:600'>{t('sub_not')}</span>"
-            f"</div>", unsafe_allow_html=True,
-        )
         for m in next_3:
             st.markdown(f"**📅 {mname(m)}**")
             # Maps — 3 crops side by side
@@ -1609,6 +1610,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                 pivot_m.columns.name = None
                 pivot_m = pivot_m.rename(columns={"Kecamatan": t("sub_col")})
                 kec_crop_cols = [c for c in pivot_m.columns if c != t("sub_col")]
+                st.markdown(_legend_html, unsafe_allow_html=True)
                 st.dataframe(
                     pivot_m.style.map(_color_kec, subset=kec_crop_cols),
                     use_container_width=True, hide_index=True,

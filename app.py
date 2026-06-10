@@ -1615,6 +1615,40 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
                     pivot_m.style.map(_color_kec, subset=kec_crop_cols),
                     use_container_width=True, hide_index=True,
                 )
+                # Action banner when ALL sub-districts are Not Advised for ALL crops
+                all_not_advised = all(
+                    "❌" in str(pivot_m[c].iloc[r])
+                    for c in kec_crop_cols
+                    for r in range(len(pivot_m))
+                )
+                if all_not_advised:
+                    if lang == "id":
+                        action_md = (
+                            "⛔ **Semua komoditi tidak disarankan bulan ini.** "
+                            "Langkah yang bisa diambil petani:\n\n"
+                            f"- 🌿 **{t('Cassava')}** paling tahan kering — "
+                            "pertimbangkan tanam saat kondisi membaik (biasanya Okt–Nov)\n"
+                            "- 🛠️ Gunakan waktu ini untuk **persiapan lahan**: "
+                            "olah tanah, perbaiki drainase, pupuk dasar\n"
+                            f"- 💧 Untuk **{t('Oil Palm')}** yang sudah ada: "
+                            "siram tanaman muda (<3 tahun) saat bulan kering\n"
+                            "- 📅 Pantau tabel bulan berikutnya — "
+                            "tanam begitu status mencapai ⚠️ atau ✅"
+                        )
+                    else:
+                        action_md = (
+                            "⛔ **All crops not advised this month.** "
+                            "Suggested actions for farmers:\n\n"
+                            f"- 🌿 **{t('Cassava')}** is the most drought-tolerant — "
+                            "consider planting when conditions improve (typically Oct–Nov)\n"
+                            "- 🛠️ Use this period for **land preparation**: "
+                            "soil tillage, drainage repair, basal fertilisation\n"
+                            f"- 💧 For existing **{t('Oil Palm')}**: "
+                            "irrigate young trees (<3 yrs) during dry months\n"
+                            "- 📅 Check the next month's table — "
+                            "plant as soon as status reaches ⚠️ or ✅"
+                        )
+                    st.warning(action_md)
     else:
         st.info("📍 " + ("Pilih kabupaten di atas untuk melihat rincian per kecamatan."
                           if lang == "id" else

@@ -1429,6 +1429,14 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         )
 
     # ── MAPS + KECAMATAN (shown first) ───────────────────────────
+    b_lats, b_lons   = [], []
+    g_lats, g_lons   = [], []
+    peat_mask        = {}
+    _peat_cap        = ""
+    clat, clon, zoom_kab = -1.5, 113.0, 6
+    kec_lats, kec_lons   = [], []
+    kab_bbox             = None
+
     if grid_clim is not None:
         try:
             b_lats, b_lons, _ = load_kabupaten_boundaries(DEFAULT_SHP_PATH)
@@ -1487,46 +1495,17 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
             return pivot.rename(columns={"Kecamatan": t("sub_col")})
 
         if selected_kab:
-            st.markdown(
-                f"<div class='section-header'>{t('sec_map')} — {selected_kab}</div>",
-                unsafe_allow_html=True,
-            )
-            with st.expander(t("map_exp_label")):
-                st.caption(t("map_caption"))
-                clat, clon, zoom_kab = kabupaten_map_bounds(mapping_kab, selected_kab)
-                kec_lats, kec_lons   = load_kecamatan_boundaries(DEFAULT_KEC_PATH, selected_kab)
-
-                # Kabupaten bounding box for fine-resolution IDW
-                kab_pts = [(float(c.split("_")[0]), float(c.split("_")[1]))
-                           for c, (kab, _) in mapping_kab.items() if kab == selected_kab]
-                if kab_pts:
-                    kp_lats, kp_lons = zip(*kab_pts)
-                    pad = 0.05
-                    kab_bbox = (min(kp_lats)-pad, max(kp_lats)+pad,
-                                min(kp_lons)-pad, max(kp_lons)+pad)
-                else:
-                    kab_bbox = None
-                map_cols = st.columns(3)
-                for col, crop_name in zip(map_cols, CROPS.keys()):
-                    crop   = CROPS[crop_name]
-                    best_m = upcoming[crop_name]["best_month"]
-                    with col:
-                        st.markdown(
-                            f"<div style='text-align:center;font-weight:700;font-size:1.05rem;"
-                            f"color:{crop['color']};margin-bottom:4px'>"
-                            f"{crop['icon']} {t(crop_name)}</div>",
-                            unsafe_allow_html=True,
-                        )
-                        with st.spinner(f"{t(crop_name)}..."):
-                            fig = make_crop_map(
-                                grid_clim, crop_name, best_m, oni_val,
-                                b_lats, b_lons, g_lats, g_lons, peat_mask,
-                                center_lat=clat, center_lon=clon, zoom=zoom_kab,
-                                kec_lats=kec_lats, kec_lons=kec_lons,
-                                idw_resolution=0.03, idw_bbox=kab_bbox,
-                            )
-                        st.plotly_chart(fig, use_container_width=True)
-                st.caption(_peat_cap)
+            clat, clon, zoom_kab = kabupaten_map_bounds(mapping_kab, selected_kab)
+            kec_lats, kec_lons   = load_kecamatan_boundaries(DEFAULT_KEC_PATH, selected_kab)
+            kab_pts = [(float(c.split("_")[0]), float(c.split("_")[1]))
+                       for c, (kab, _) in mapping_kab.items() if kab == selected_kab]
+            if kab_pts:
+                kp_lats, kp_lons = zip(*kab_pts)
+                pad = 0.05
+                kab_bbox = (min(kp_lats)-pad, max(kp_lats)+pad,
+                            min(kp_lons)-pad, max(kp_lons)+pad)
+            else:
+                kab_bbox = None
 
         else:
             st.markdown(
@@ -1567,7 +1546,7 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         unsafe_allow_html=True,
     )
 
-    # ── KECAMATAN BREAKDOWN — 3 MONTHS ───────────────────────────
+    # ── MAP + KECAMATAN BREAKDOWN — 3 MONTHS ─────────────────────
     def _color_kec(v):
         if "✅" in str(v): return "background-color:#d5f5e3;color:#1a6b3c;font-weight:600"
         if "⚠️" in str(v): return "background-color:#fef9e7;color:#7d6608;font-weight:600"
@@ -1587,6 +1566,29 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
         )
         for m in next_3:
             st.markdown(f"**📅 {mname(m)}**")
+            # Maps — 3 crops side by side
+            map_cols = st.columns(3)
+            for col, crop_name in zip(map_cols, CROPS.keys()):
+                crop = CROPS[crop_name]
+                with col:
+                    st.markdown(
+                        f"<div style='text-align:center;font-weight:700;font-size:1.0rem;"
+                        f"color:{crop['color']};margin-bottom:4px'>"
+                        f"{crop['icon']} {t(crop_name)}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    with st.spinner(f"{t(crop_name)}..."):
+                        fig = make_crop_map(
+                            grid_clim, crop_name, m, oni_val,
+                            b_lats, b_lons, g_lats, g_lons, peat_mask,
+                            center_lat=clat, center_lon=clon, zoom=zoom_kab,
+                            kec_lats=kec_lats, kec_lons=kec_lons,
+                            idw_resolution=0.03, idw_bbox=kab_bbox,
+                        )
+                    st.plotly_chart(fig, use_container_width=True)
+            if _peat_cap:
+                st.caption(_peat_cap)
+            # Kecamatan table
             month_rows = []
             for cn in CROPS:
                 kec_rows = kecamatan_summary(grid_clim, cn, m, oni_val, mapping_kab)

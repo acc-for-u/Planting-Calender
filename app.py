@@ -1413,20 +1413,25 @@ def page_farmer(clim, enso_phase, oni_val, grid_clim=None, latest_oni=0.0, lates
             delta=f"{_delta_pct:+.0f}% {_vs}",
             delta_color="off",
         )
-    with sq2:
-        st.metric(
-            "🌱 " + ("Best Crop" if lang == "en" else "Tanaman Terbaik"),
-            f"{_bi} {t(_bc)}",
-            delta=_st,
-            delta_color="normal" if _bs >= 75 else ("off" if _bs >= 50 else "inverse"),
-        )
-    with sq3:
-        st.metric(
-            "📅 " + ("Optimal Month" if lang == "en" else "Bulan Optimal"),
-            _bm,
-            delta=_st,
-            delta_color="off",
-        )
+    if _bs >= 50:
+        with sq2:
+            st.metric(
+                "🌱 " + ("Best Crop" if lang == "en" else "Tanaman Terbaik"),
+                f"{_bi} {t(_bc)}",
+                delta=_st,
+                delta_color="normal" if _bs >= 75 else "off",
+            )
+        with sq3:
+            st.metric(
+                "📅 " + ("Optimal Month" if lang == "en" else "Bulan Optimal"),
+                _bm,
+                delta=_st,
+                delta_color="off",
+            )
+    else:
+        with sq2:
+            st.warning("⛔ " + ("No crop recommended this period" if lang == "en"
+                                else "Tidak ada tanaman yang direkomendasikan"))
 
     # ── MAPS + KECAMATAN (shown first) ───────────────────────────
     b_lats, b_lons   = [], []
